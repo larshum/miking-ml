@@ -15,3 +15,7 @@ mcore-cpu:
 
 mcore-cpu-run:
 	$(MCORE_CPU_OUTFILE) $(MNIST_TRAININGSET) $(MNIST_VALIDATIONSET)
+
+pytorch-cpu-run:
+	# NOTE: On alpine: `apk add py3-pip python3-devel` and `pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu`
+	python3 bm-mnist.py $(MNIST_TRAININGSET) $(MNIST_VALIDATIONSET)
