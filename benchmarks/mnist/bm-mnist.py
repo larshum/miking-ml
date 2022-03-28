@@ -10,11 +10,11 @@ import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
+from torch.optim.lr_scheduler import ExponentialLR
 
 #import torch
-#import torch.optim as optim
 #from torchvision import datasets, transforms
-#from torch.optim.lr_scheduler import ExponentialLR
 
 
 def main():
@@ -50,12 +50,27 @@ def main():
     validation_set = CustomMNISTDataset.load_txt(args.validation_set)
 
     # Define the data loaders that will handle fetching of data
-    train_loader = torch.utils.data.DataLoader(training_set,**training_kwargs)
+    training_loader = torch.utils.data.DataLoader(training_set,**training_kwargs)
     validation_loader = torch.utils.data.DataLoader(validation_set, **validation_kwargs)
 
-    network = MNIST_Network()
+    network = MNIST_Network().to(device)
 
+    # Define the optimizer to user for gradient descent
+    learning_rate = 0.9
+    gamma = 0.9
+    optimizer = optim.Adadelta(network.parameters(), lr=learning_rate)
+
+    # Shrinks the learning rate by gamma every step_size
+    scheduler = ExponentialLR(optimizer, gamma=gamma)
+
+    # Train the model
+    n_epochs = 10
+    log_interval = 10
     nn_accuracy(network, device, validation_loader)
+    for epoch in range(1, n_epochs + 1):
+        train(network, device, training_loader, optimizer, epoch, log_interval)
+        nn_accuracy(network, device, validation_loader)
+        scheduler.step()
 
 
 class CustomMNISTDataset(torch.utils.data.Dataset):
@@ -105,20 +120,20 @@ class MNIST_Network(nn.Module):
         output = F.softmax(x, dim=1)
         return output
 
-#def train(model, device, train_loader, optimizer, epoch, log_interval):
-#    model.train()
-#    for batch_idx, (data, target) in enumerate(train_loader):
-#        data, target = data.to(device), target.to(device)
-#        optimizer.zero_grad()
-#        output = model(data)
-#        loss = F.cross_entropy(output, target)
-#        loss.backward()
-#        optimizer.step()
-#        if batch_idx % log_interval == 0:
-#            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-#                epoch, batch_idx * len(data), len(train_loader.dataset),
-#                100. * batch_idx / len(train_loader), loss.item()))
-#
+def nn_train(model, device, training_loader, optimizer, epoch, log_interval):
+    model.train()
+    for batch_idx, (data, target) in enumerate(training_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = F.cross_entropy(output, target)
+        loss.backward()
+        optimizer.step()
+        if batch_idx % log_interval == 0:
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                epoch, batch_idx * len(data), len(training_loader.dataset),
+                100. * batch_idx / len(training_loader), loss.item()))
+
 
 def nn_accuracy(model, device, validation_loader):
     model.eval()
