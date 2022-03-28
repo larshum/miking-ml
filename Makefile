@@ -4,12 +4,6 @@ IMAGE=mikinglang/miking:latest-alpine
 
 MIDEBUG_ALIAS='"alias mi-debug="boot eval <miking-path>/src/main/mi.mc --debug-stack-trace --"'
 
-proj.%: FORCE
-	$(eval PWD := $(shell pwd -P))
-	docker run --rm -it -v $(PWD)/src/$*:/mnt:ro $(IMAGE) \
-	           bash -c "mi compile /mnt/main.mc --output /tmp/$* && /tmp/$*"
-FORCE:
-
 example-mnist:
 	$(eval PWD := $(shell pwd -P))
 	$(eval TRAINFILE := /mnt/_data/mnist-train.txt)
