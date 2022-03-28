@@ -25,15 +25,15 @@ let _iterateSE: (Int -> ()) -> Int -> () = lam f. lam n.
   iterH 0
 
 -- Sequential dummy of the parallelLoop intrinsic
-let parallelLoop: Int -> (Int -> ()) -> () = lam n. lam f. _iterateSE f n
+--let parallelLoop: Int -> (Int -> ()) -> () = lam n. lam f. _iterateSE f n
 
 -- Sequential dummy of the seqLoopFoldl
-let seqLoopFoldl: Float -> Int -> (Float -> Int -> Float) -> Float =
-  lam initacc: Float. lam n: Int. lam f: (Float -> Int -> Float).
-  recursive let work = lam acc. lam i.
-    if eqi i n then acc
-    else work (f acc i) (addi i 1)
-  in work initacc 0
+--let seqLoopFoldl: Float -> Int -> (Float -> Int -> Float) -> Float =
+--  lam initacc: Float. lam n: Int. lam f: (Float -> Int -> Float).
+--  recursive let work = lam acc. lam i.
+--    if eqi i n then acc
+--    else work (f acc i) (addi i 1)
+--  in work initacc 0
 
 
 -- Applies the operation z = Wx + b where
