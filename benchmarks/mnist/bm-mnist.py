@@ -4,6 +4,7 @@
 # Based off of this implementation: https://kirenz.github.io/deep-learning/docs/mnist-pytorch.html
 
 import argparse
+import os
 import sys
 
 import torch
