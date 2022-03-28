@@ -45,7 +45,7 @@ let nnTrainSGD =
       printLn (join [" - validation_data size: ", int2string (length validation_data)]);
       printLn (join [" - batchsize: ", int2string params.batchsize]);
       printLn (join [" - rounds: ", int2string rounds]);
-      printLn (join [" - epochs: ", int2string params.epoch]);
+      printLn (join [" - epochs: ", int2string params.epochs]);
       printLn (join [" - alpha (initial learning rate): ", float2string params.init_alpha]);
       printLn (join [" - alpha decay: ", float2string params.decay_alpha]);
       printLn (join [" - lambda (initial regularization factor): ", float2string params.init_lambda]);
@@ -53,10 +53,10 @@ let nnTrainSGD =
     else ()
   );
   recursive let iterate = lam it. lam alpha. lam lambda.
-    if eqi it params.epoch then () else (
+    if eqi it params.epochs then () else (
       (
         if params.printStatus then
-          printLn (join ["[Iteration ", int2string (addi it 1), "/", int2string params.epoch, "]"]);
+          printLn (join ["[Iteration ", int2string (addi it 1), "/", int2string params.epochs, "]"]);
           printLn (join ["alpha = ", float2string alpha]);
           printLn (join ["lambda = ", float2string lambda])
         else ()
