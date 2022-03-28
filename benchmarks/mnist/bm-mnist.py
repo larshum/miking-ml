@@ -35,31 +35,41 @@ def main():
     print(f"using device: \"{device}\"")
     device = torch.device(device)
 
-    training_set = mnist_loader(args.training_set)
-    validation_set = mnist_loader(args.validation_set)
+    training_set = CustomMNISTDataset.load_txt(args.training_set)
+    validation_set = CustomMNISTDataset.load_txt(args.validation_set)
 
 
 
-def mnist_loader(path):
-    print(f"loading MNIST from {path}...")
-    datapoints = []
-    with open(path) as f:
-        for i, line in enumerate(f.readlines()):
-            line = line.strip()
-            if len(line) == 0:
-                break
-            parts = line.split()
-            # <class> <pixel 1> <pixel 2> ...
-            dp = (
-                int(parts[0]),
-                torch.tensor([float(i) / 255.0 for i in parts[1:]]).reshape(784, 1)
-            )
-            datapoints.append(dp)
-            sys.stderr.write(f"\rpoints scanned: {i + 1}")
+class CustomMNISTDataset(torch.utils.data.Dataset):
+    def __init__(self, datapoints):
+        super().__init__()
+        self.__datapoints = datapoints
 
-    return datapoints
+    @classmethod
+    def load_txt(cls, path):
+        print(f"loading MNIST from {path}...")
+        datapoints = []
+        with open(path) as f:
+            for i, line in enumerate(f.readlines()):
+                line = line.strip()
+                if len(line) == 0:
+                    break
+                parts = line.split()
+                # <class> <pixel 1> <pixel 2> ...
+                dp = (
+                    torch.tensor([float(i) / 255.0 for i in parts[1:]]).reshape(784, 1),
+                    int(parts[0])
+                )
+                datapoints.append(dp)
+                sys.stderr.write(f"\rpoints scanned: {i + 1}")
 
+        sys.stderr.write("\n")
+        cls(datapoints)
 
+    def __len__(self):
+        return len(self.__datapoints)
+    def __getitem__(self, idx):
+        return self.__datapoints.__getitem__(idx)
 
 
 
