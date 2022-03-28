@@ -34,6 +34,9 @@ def main():
     print(f"using device: \"{device}\"")
     device = torch.device(device)
 
+    training_set = mnist_loader(args.training_set)
+    validation_set = mnist_loader(args.validation_set)
+
 
 
 def mnist_loader(path):
@@ -46,7 +49,10 @@ def mnist_loader(path):
                 break
             parts = line.split()
             # <class> <pixel 1> <pixel 2> ...
-            dp = (int(parts[0]), [float(i) / 255.0 for i in parts[1:]])
+            dp = (
+                int(parts[0]),
+                torch.tensor([float(i) / 255.0 for i in parts[1:]]).reshape(784, 1)
+            )
             datapoints.append(dp)
             sys.stderr.write(f"\rpoints scanned: {i + 1}")
 
