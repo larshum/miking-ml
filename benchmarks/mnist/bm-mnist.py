@@ -111,3 +111,6 @@ def mnist_loader(path):
 #        100. * correct / len(test_loader.dataset)))
 #
 #
+
+if __name__ == "__main__":
+    main()
