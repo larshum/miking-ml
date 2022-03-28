@@ -68,7 +68,7 @@ def main():
     log_interval = 10
     nn_accuracy(network, device, validation_loader)
     for epoch in range(1, n_epochs + 1):
-        train(network, device, training_loader, optimizer, epoch, log_interval)
+        nn_train(network, device, training_loader, optimizer, epoch, log_interval)
         nn_accuracy(network, device, validation_loader)
         scheduler.step()
 
