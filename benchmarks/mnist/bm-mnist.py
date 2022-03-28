@@ -132,6 +132,8 @@ def nn_accuracy(model, device, validation_loader):
             test_loss += F.cross_entropy(output, target).item()
             # get the index of the max log-probability
             pred = output.argmax(dim=1, keepdim=True)
+            print("pred", pred)
+            print("target", target)
             correct += 1 if pred.item() == target.item() else 0
 
     test_loss /= len(validation_loader.dataset)
