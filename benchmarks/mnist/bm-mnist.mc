@@ -19,9 +19,8 @@ let mnist_network: () -> NeuralNetwork = lam.
 
 
 let mnist_runBenchmark = lam training_data. lam validation_data.
-  let params = {{{nnVanillaSGDParameters
-  	with rounds = 10}
-  	with iterations = 10}
+  let params = {{nnVanillaSGDParameters
+  	with epochs = 10}
   	with printStatus = true}
   	--with printStatus = false}
   in

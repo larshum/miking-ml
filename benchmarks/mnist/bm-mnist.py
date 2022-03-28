@@ -105,7 +105,6 @@ class CustomMNISTDataset(torch.utils.data.Dataset):
         return self.__datapoints.__getitem__(idx)
 
 
-
 # Equivalent MNIST structure to that in MCore
 class MNIST_Network(nn.Module):
     def __init__(self):
@@ -120,6 +119,7 @@ class MNIST_Network(nn.Module):
         output = F.softmax(x, dim=1)
         return output
 
+
 def nn_train(model, device, training_loader, optimizer, epoch, log_interval):
     model.train()
     for batch_idx, (data, target) in enumerate(training_loader):
@@ -132,7 +132,7 @@ def nn_train(model, device, training_loader, optimizer, epoch, log_interval):
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(training_loader.dataset),
-                100. * batch_idx / len(training_loader), loss.item()))
+                100.0 * batch_idx / len(training_loader), loss.item()))
 
 
 def nn_accuracy(model, device, validation_loader):

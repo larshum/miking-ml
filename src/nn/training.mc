@@ -11,20 +11,18 @@ type SGDParameters = {
   decay_alpha: Float,
   decay_lambda: Float,
   batchsize: Int,
-  rounds: Int,
-  iterations: Int,
+  epochs: Int,
   printStatus: Bool,
   evaluateBetweenIterations: Bool
 }
 
 let nnVanillaSGDParameters: SGDParameters = {
-    init_alpha = 0.1,
+    init_alpha = 0.9,
     init_lambda = 0.01,
     decay_alpha = 0.1,
     decay_lambda = 0.1,
     batchsize = 32,
-    rounds = 100,
-    iterations = 100,
+    epochs = 10,
     printStatus = false,
     evaluateBetweenIterations = false
 }
@@ -34,14 +32,20 @@ let nnTrainSGD =
   lam network: NeuralNetwork.
   lam training_data: [DataPoint].
   lam validation_data: [DataPoint].
+  -- Determine the number of rounds to try to cover the entire training set
+  let rounds =
+    divi (addi (length training_data)
+               (subi params.batchsize 1))
+         params.batchsize
+  in
   (
     if params.printStatus then
       printLn "Starting SGD (stochastic gradient descent)";
       printLn (join [" - training_data size: ", int2string (length training_data)]);
       printLn (join [" - validation_data size: ", int2string (length validation_data)]);
       printLn (join [" - batchsize: ", int2string params.batchsize]);
-      printLn (join [" - rounds: ", int2string params.rounds]);
-      printLn (join [" - iterations (epochs): ", int2string params.iterations]);
+      printLn (join [" - rounds: ", int2string rounds]);
+      printLn (join [" - epochs: ", int2string params.epoch]);
       printLn (join [" - alpha (initial learning rate): ", float2string params.init_alpha]);
       printLn (join [" - alpha decay: ", float2string params.decay_alpha]);
       printLn (join [" - lambda (initial regularization factor): ", float2string params.init_lambda]);
@@ -49,16 +53,16 @@ let nnTrainSGD =
     else ()
   );
   recursive let iterate = lam it. lam alpha. lam lambda.
-    if eqi it params.iterations then () else (
+    if eqi it params.epoch then () else (
       (
         if params.printStatus then
-          printLn (join ["[Iteration ", int2string (addi it 1), "/", int2string params.iterations, "]"]);
+          printLn (join ["[Iteration ", int2string (addi it 1), "/", int2string params.epoch, "]"]);
           printLn (join ["alpha = ", float2string alpha]);
           printLn (join ["lambda = ", float2string lambda])
         else ()
       );
       recursive let run_batchrounds = lam rnd.
-        if eqi rnd params.rounds then (
+        if eqi rnd rounds then (
           ( -- LF after the round counter
             if params.printStatus then
               printLn ""
@@ -67,7 +71,7 @@ let nnTrainSGD =
         ) else (
           ( -- print round count (on a single line)
             if params.printStatus then (
-              print (join ["\rround ", int2string (addi rnd 1), "/", int2string params.rounds]);
+              print (join ["\rround ", int2string (addi rnd 1), "/", int2string rounds]);
               flushStdout ()
             ) else ()
           );
