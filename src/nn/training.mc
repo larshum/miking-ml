@@ -38,6 +38,8 @@ let nnTrainSGD =
                (subi params.batchsize 1))
          params.batchsize
   in
+  -- TEMP!
+  let rounds = 10 in
   (
     if params.printStatus then
       printLn "Starting SGD (stochastic gradient descent)";
