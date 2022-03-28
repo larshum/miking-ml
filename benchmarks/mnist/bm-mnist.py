@@ -65,7 +65,7 @@ def main():
 
     # Train the model
     n_epochs = 10
-    log_interval = 10
+    log_interval = 200
     nn_accuracy(network, device, validation_loader)
     for epoch in range(1, n_epochs + 1):
         nn_train(network, device, training_loader, optimizer, epoch, log_interval)
