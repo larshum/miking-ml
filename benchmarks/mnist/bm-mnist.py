@@ -82,7 +82,7 @@ class CustomMNISTDataset(torch.utils.data.Dataset):
                 sys.stderr.write(f"\rpoints scanned: {i + 1}")
 
         sys.stderr.write("\n")
-        cls(datapoints)
+        return cls(datapoints)
 
     def __len__(self):
         return len(self.__datapoints)
