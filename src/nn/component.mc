@@ -18,19 +18,21 @@ lang NNComponentBase
   -- intentionally left blank
 
   -- These functions are to be implemented by each individual component.
-  sem nnComponentMakeExn (indim: [Int]) (outdim: [Int])  (weights : [Tensor[Float]]) = -- String -> [Int] -> [Int] -> [Tensor[Float]] -> NeuralNetworkComponent
+  sem nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> String -> NeuralNetworkComponent
+  sem nnComponentMakeExn indim outdim weights =
   | invalid_name -> error (join ["Invalid component name \"", invalid_name, "\""])
-  sem nnComponentName = -- NeuralNetworkComponent -> String
-  sem nnComponentInGrad = -- NeuralNetworkComponent -> Tensor[Float]
-  sem nnComponentOutBuf = -- NeuralNetworkComponent -> Tensor[Float]
-  sem nnComponentWeights = -- NeuralNetworkComponent -> [Tensor[Float]]
-  sem nnComponentGradients = -- NeuralNetworkComponent -> [Tensor[Float]]
-  sem nnComponentApplyExn (input : Tensor[Float]) = -- NeuralNetworkComponent -> Tensor[Float] -> Tensor[Float]
-  sem nnComponentBackpropExn (comp_input: Tensor[Float]) (output_grad: Tensor[Float]) = -- NeuralNetworkComponent -> Tensor[Float] -> Tensor[Float] -> Tensor[Float]
+  sem nnComponentName: NeuralNetworkComponent -> String
+  sem nnComponentInGrad: NeuralNetworkComponent -> Tensor[Float]
+  sem nnComponentOutBuf: NeuralNetworkComponent -> Tensor[Float]
+  sem nnComponentWeights: NeuralNetworkComponent -> [Tensor[Float]]
+  sem nnComponentGradients: NeuralNetworkComponent -> [Tensor[Float]]
+  sem nnComponentApplyExn: Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float]
+  sem nnComponentBackpropExn: Tensor[Float] -> Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float]
 
   -- Standard semantics that do not need to be implemented by specific components
 
   -- Zeros out all the gradients in the component
+  sem nnComponentZeroGrad: NeuralNetworkComponent -> ()
   sem nnComponentZeroGrad =
   | comp ->
     let gradients = nnComponentGradients comp in
@@ -38,7 +40,8 @@ lang NNComponentBase
     foldl (lam. lam grad. tensorMapInplace (lam. 0.0) grad) () gradients
 
   -- Returns the input and output dimensions for a component
-  sem nnComponentDimensions = -- NeuralNetworkComponent -> {indim: [Int], outdim: [Int]}
+  sem nnComponentDimensions: NeuralNetworkComponent -> {indim: [Int], outdim: [Int]}
+  sem nnComponentDimensions =
   | comp -> {
       indim = tensorShape (nnComponentInGrad comp),
       outdim = tensorShape (nnComponentOutBuf comp)
@@ -46,6 +49,7 @@ lang NNComponentBase
 
   -- Copies the component with new independent tensors. Note that this will not
   -- preserve any gradients.
+  sem nnComponentCopy: NeuralNetworkComponent -> NeuralNetworkComponent
   sem nnComponentCopy =
   | comp ->
     let name = nnComponentName comp in
@@ -53,6 +57,7 @@ lang NNComponentBase
     let weights = nnComponentWeights comp in
     nnComponentMakeExn dim.indim dim.outdim (map tensorCopy weights) name
 
+  sem nnComponent2string: NeuralNetworkComponent -> String
   sem nnComponent2string =
   | comp ->
     let name = nnComponentName comp in

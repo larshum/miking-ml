@@ -26,6 +26,9 @@ def main():
     parser.add_argument("--cuda", dest="cuda", action="store_const",
                         const=True, default=False,
                         help="Run the Benchmark with the CUDA backend.")
+    parser.add_argument("--cpu-threads", dest="cpu_threads", metavar="N",
+                        type=int, default=1,
+                        help="Number of CPU threads to use.")
     args = parser.parse_args()
 
     training_kwargs = {"batch_size": 32}
@@ -46,6 +49,9 @@ def main():
     print(f"using device: \"{device}\"")
     device = torch.device(device)
 
+    print(f"number of CPU threads used: {args.cpu_threads}")
+    torch.set_num_threads(args.cpu_threads)
+
     training_set = CustomMNISTDataset.load_txt(args.training_set)
     validation_set = CustomMNISTDataset.load_txt(args.validation_set)
 
@@ -58,7 +64,7 @@ def main():
     # Define the optimizer to user for gradient descent
     learning_rate = 0.9
     gamma = 0.9
-    optimizer = optim.Adadelta(network.parameters(), lr=learning_rate)
+    optimizer = optim.SGD(network.parameters(), lr=learning_rate)
 
     # Shrinks the learning rate by gamma every step_size
     scheduler = ExponentialLR(optimizer, gamma=gamma)

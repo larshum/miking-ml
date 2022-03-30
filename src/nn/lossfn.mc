@@ -11,26 +11,30 @@ lang NNLossFunctionBase
   -- intentionally left blank
 
   -- These functions are to be implemented by each individual LossFunction.
-  sem nnLossFunctionMakeExn (indim: [Int]) = -- String -> [Int] -> [Int] -> [Tensor[Float]] -> NeuralNetworkLossFunction
+  sem nnLossFunctionMakeExn: [Int] -> String -> NeuralNetworkLossFunction
+  sem nnLossFunctionMakeExn indim =
   | invalid_name -> error (join ["Invalid loss function name \"", invalid_name, "\""])
-  sem nnLossFunctionName = -- NeuralNetworkLossFunction -> String
-  sem nnLossFunctionInGrad = -- NeuralNetworkLossFunction -> Tensor[Float]
-  sem nnLossFunctionApplyExn (input: Tensor[Float]) (expected: [Int]) = -- NeuralNetworkLossFunction -> Tensor[Float] -> [Int] -> Float
-  sem nnLossFunctionBackpropExn (input: Tensor[Float]) (expected: [Int]) = -- NeuralNetworkLossFunction -> Tensor[Float] -> [Int] -> Tensor[Float]
+  sem nnLossFunctionName: NeuralNetworkLossFunction -> String
+  sem nnLossFunctionInGrad: NeuralNetworkLossFunction -> Tensor[Float]
+  sem nnLossFunctionApplyExn: Tensor[Float] -> [Int] -> NeuralNetworkLossFunction -> Float
+  sem nnLossFunctionBackpropExn: Tensor[Float] -> [Int] -> NeuralNetworkLossFunction -> Tensor[Float]
 
   -- Standard semantics that do not need to be implemented by specific loss functions
 
   -- Returns the input and output dimensions for a loss function
-  sem nnLossFunctionDimensions = -- NeuralNetworkLossFunction -> {indim: [Int]}
+  sem nnLossFunctionDimensions: NeuralNetworkLossFunction -> {indim: [Int]}
+  sem nnLossFunctionDimensions =
   | lossfn -> {indim = tensorShape (nnLossFunctionInGrad lossfn)}
 
   -- Returns a copy of the loss function with independent tensors
+  sem nnLossFunctionCopy: NeuralNetworkLossFunction -> NeuralNetworkLossFunction
   sem nnLossFunctionCopy =
   | lossfn ->
     let name = nnLossFunctionName lossfn in
     let dim: {indim: [Int]} = nnLossFunctionDimensions lossfn in
     nnLossFunctionMakeExn dim.indim name
 
+  sem nnLossFunction2string: NeuralNetworkLossFunction -> String
   sem nnLossFunction2string =
   | lossfn ->
     let name = nnLossFunctionName lossfn in
