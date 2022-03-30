@@ -299,7 +299,7 @@ let #var"tensorOpExn: z *= scalar(c)": Float -> Tensor[Float] -> () =
   parallelLoop (muli m n) iterfun
 
 
--- Inplace scalar assignment where
+-- Scalar assignment where
 --  x is a MxN matrix/vector
 --  c is a scalar
 let #var"tensorOpExn: z = scalar(c)": Float -> Tensor[Float] -> () =
@@ -332,3 +332,19 @@ let #var"tensorOpExn: z += x * scalar(c)": Tensor[Float] -> Float -> Tensor[Floa
   in
   parallelLoop (muli m n) iterfun
 
+-- Inplace 1-hot operation on a vector
+--  y is an index (integer)
+--  c is a scalar
+--  z is a Mx1 output vector
+let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Float -> Tensor[Float] -> () =
+  lam y. lam c. lam z.
+  let m = get (tensorShape z) 0 in
+  -- NOTE(johnwikman, 2022-03-30):
+  -- This is a parallel loop to ensure that the tensor operations all occur on
+  -- equivalent backends.
+  let iterfun: Int -> () = lam.
+    tensorSetFloat z [y,0] (
+      addf (tensorGetFloat z [y,0]) c
+    )
+  in
+  parallelLoop 1 iterfun

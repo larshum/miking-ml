@@ -48,13 +48,14 @@ let main = lam.
       let network: NeuralNetwork =
         nnMake [nnFullyConnected 784 128,
                 nnReLU 128,
-                nnFullyConnected 128 10,
-                nnSoftMax 10]
-               (nnCrossEntropyLoss 10)
+                nnFullyConnected 128 10]
+               (nnSoftMaxCrossEntropyLoss 10)
       in
       let sgdparams =
-        {nnVanillaSGDParameters
+        {{{nnVanillaSGDParameters
         with epochs = 1}
+        with evaluateBetweenEpochs = true}
+        with evaluateBeforeFirstEpoch = true}
       in
       printLn (join ["loading mnist training data from ", training_file, "..."]);
       let traindata = datasetLoadCArrayFloatMnist training_file in

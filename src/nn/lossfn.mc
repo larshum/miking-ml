@@ -54,7 +54,7 @@ lang NNCrossEntropyLossFunction
   sem nnLossFunctionMakeExn (indim: [Int]) =
   | "CrossEntropyLoss" ->
     NNCrossEntropyLoss {
-      in_grad = tensorCreateDense indim (lam. 0.0)
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0)
     }
   sem nnLossFunctionName = | NNCrossEntropyLoss _ -> "CrossEntropyLoss"
   sem nnLossFunctionInGrad = | NNCrossEntropyLoss r -> r.in_grad
@@ -69,14 +69,53 @@ lang NNCrossEntropyLossFunction
     r.in_grad
 end
 
--- TODO(jwikman, 2022-03-17): Merge softmax and cross entropy loss as a single lossfn for more efficient gradients
+-- A softmax cross entropy loss function. Given an expected output index i of
+-- a vector x, this computes the loss as -log(softmax(x)_i)
+--  in_grad: Buffer for storing gradient to the input of this layer with
+--           respect to the loss.
+-- NOTE(wikman,2022-03-30): This is an optimized version where the softmax and
+--                          cross entropy loss is computed together. This is
+--                          highly efficient for backpropagation, but not too
+--                          significant for the forward pass.
+lang NNSoftMaxCrossEntropyLossFunction
+  syn NeuralNetworkLossFunction =
+  | NNSoftMaxCrossEntropyLoss {
+      in_grad: Tensor[Float],
+      softmax_buf: Tensor[Float]
+    }
 
+  sem nnLossFunctionMakeExn (indim: [Int]) =
+  | "SoftMaxCrossEntropyLoss" ->
+    NNSoftMaxCrossEntropyLoss {
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0),
+      softmax_buf = tensorCreateCArrayFloat indim (lam. 0.0)
+    }
+  sem nnLossFunctionName = | NNSoftMaxCrossEntropyLoss _ -> "SoftMaxCrossEntropyLoss"
+  sem nnLossFunctionInGrad = | NNSoftMaxCrossEntropyLoss r -> r.in_grad
+  sem nnLossFunctionApplyExn (input : Tensor[Float]) (expected: [Int]) =
+  | NNSoftMaxCrossEntropyLoss r ->
+    #var"tensorOpExn: z = SoftMax(x)" input r.softmax_buf;
+    negf (log (tensorGetExn r.softmax_buf expected))
+  sem nnLossFunctionBackpropExn (input: Tensor[Float]) (expected: [Int]) =
+  | NNSoftMaxCrossEntropyLoss r ->
+    -- NOTE: Assumes that input and r.in_grad has the same dimensions
+    -- backprop SoftMaxCrossEntropyLoss: SoftMax(input) - 1Hot(y)
+    #var"tensorOpExn: z = SoftMax(x)" input r.in_grad;
+    #var"tensorOpExp: z += 1-Hot(y) * scalar(c)" (get expected 0) (negf 1.0) r.in_grad;
+    r.in_grad
+end
 
 lang NNStandardLossFunctions = NNLossFunctionBase
                              + NNCrossEntropyLossFunction
+                             + NNSoftMaxCrossEntropyLossFunction
 end
 
 -- Initializes a CrossEntropyLoss function with the specified dimension
 let nnCrossEntropyLoss: Int -> NeuralNetworkLossFunction = lam dim.
   use NNStandardLossFunctions in
   nnLossFunctionMakeExn [dim,1] "CrossEntropyLoss"
+
+-- Initializes a SoftMaxCrossEntropyLoss function with the specified dimension
+let nnSoftMaxCrossEntropyLoss: Int -> NeuralNetworkLossFunction = lam dim.
+  use NNStandardLossFunctions in
+  nnLossFunctionMakeExn [dim,1] "SoftMaxCrossEntropyLoss"

@@ -13,7 +13,8 @@ type SGDParameters = {
   batchsize: Int,
   epochs: Int,
   printStatus: Bool,
-  evaluateBetweenEpochs: Bool
+  evaluateBetweenEpochs: Bool,
+  evaluateBeforeFirstEpoch: Bool
 }
 
 let nnVanillaSGDParameters: SGDParameters = {
@@ -24,7 +25,8 @@ let nnVanillaSGDParameters: SGDParameters = {
     batchsize = 32,
     epochs = 10,
     printStatus = true,
-    evaluateBetweenEpochs = false
+    evaluateBetweenEpochs = false,
+    evaluateBeforeFirstEpoch = false
 }
 
 let nnTrainSGD =
@@ -39,7 +41,7 @@ let nnTrainSGD =
          params.batchsize
   in
   -- TEMP!
-  let rounds = 10 in
+  -- let rounds = 10 in
   (
     if params.printStatus then
       printLn "Starting SGD (stochastic gradient descent)";
@@ -50,8 +52,21 @@ let nnTrainSGD =
       printLn (join [" - epochs: ", int2string params.epochs]);
       printLn (join [" - alpha (initial learning rate): ", float2string params.init_alpha]);
       printLn (join [" - alpha decay: ", float2string params.decay_alpha]);
-      printLn (join [" - lambda (initial regularization factor): ", float2string params.init_lambda]);
+      printLn (join [" - lambda (initial L2 regularization factor): ", float2string params.init_lambda]);
       printLn (join [" - lambda decay: ", float2string params.decay_lambda])
+    else ()
+  );
+  (
+    if params.evaluateBeforeFirstEpoch then
+      (
+        if params.printStatus then
+          printLn "evalating performance..."
+        else ()
+      );
+      let accuracy = nnAccuracyProportion params.printStatus network validation_data in
+      if params.printStatus then
+        printLn (join ["Computed accuracy: ", float2string (mulf accuracy 100.0), "%"])
+      else ()
     else ()
   );
   recursive let iterate = lam it. lam alpha. lam lambda.

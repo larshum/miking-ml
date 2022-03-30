@@ -37,7 +37,7 @@ lang NNComponentBase
   | comp ->
     let gradients = nnComponentGradients comp in
     -- NOTE: Need to reimplement the tensorMapInplace to zero out the gradients (in parallel maybe?)
-    foldl (lam. lam grad. tensorMapInplace (lam. 0.0) grad) () gradients
+    foldl (lam. lam grad. #var"tensorOpExn: z = scalar(c)" 0.0 grad) () gradients
 
   -- Returns the input and output dimensions for a component
   sem nnComponentDimensions: NeuralNetworkComponent -> {indim: [Int], outdim: [Int]}
@@ -138,8 +138,8 @@ lang NNReLUComponent
     --   len(weights) == 0
     --   indim == outdim
     NNReLU {
-      out_buf = tensorCreateDense outdim (lam. 0.0),
-      in_grad = tensorCreateDense indim (lam. 0.0)
+      out_buf = tensorCreateCArrayFloat outdim (lam. 0.0),
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0)
     }
 
   sem nnComponentName = | NNReLU _ -> "ReLU"
@@ -174,8 +174,8 @@ lang NNSoftMaxComponent
     --   len(weights) == 0
     --   indim == outdim
     NNSoftMax {
-      out_buf = tensorCreateDense outdim (lam. 0.0),
-      in_grad = tensorCreateDense indim (lam. 0.0)
+      out_buf = tensorCreateCArrayFloat outdim (lam. 0.0),
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0)
     }
 
   sem nnComponentName = | NNSoftMax _ -> "SoftMax"
@@ -209,8 +209,8 @@ let nnFullyConnected: Int -> Int -> NeuralNetworkComponent = lam indim. lam outd
   use NNStandardComponents in
   let mu = 0.0 in
   let sigma = 0.001 in
-  let w = tensorCreateDense [outdim,indim] (lam. gaussianSample mu sigma) in
-  let b = tensorCreateDense [outdim,1] (lam. gaussianSample mu sigma) in
+  let w = tensorCreateCArrayFloat [outdim,indim] (lam. gaussianSample mu sigma) in
+  let b = tensorCreateCArrayFloat [outdim,1] (lam. gaussianSample mu sigma) in
   nnComponentMakeExn [indim,1] [outdim,1] [w,b] "FullyConnected"
 
 -- Initializes a ReLU component with the specified dimension

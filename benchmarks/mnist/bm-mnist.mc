@@ -19,11 +19,12 @@ let mnist_network: () -> NeuralNetwork = lam.
 
 
 let mnist_runBenchmark = lam training_data. lam validation_data.
-  let params = {{{nnVanillaSGDParameters
+  let params = {{{{nnVanillaSGDParameters
     with epochs = 10}
     with printStatus = true}
     --with printStatus = false}
-    with evaluateBetweenIterations = true}
+    with evaluateBetweenEpochs = true}
+    with evaluateBeforeFirstEpoch = true}
   in
   printLn "creating network...";
   let network = mnist_network () in
