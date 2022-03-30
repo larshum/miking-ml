@@ -13,7 +13,7 @@ type SGDParameters = {
   batchsize: Int,
   epochs: Int,
   printStatus: Bool,
-  evaluateBetweenIterations: Bool
+  evaluateBetweenEpochs: Bool
 }
 
 let nnVanillaSGDParameters: SGDParameters = {
@@ -23,8 +23,8 @@ let nnVanillaSGDParameters: SGDParameters = {
     decay_lambda = 0.1,
     batchsize = 32,
     epochs = 10,
-    printStatus = false,
-    evaluateBetweenIterations = false
+    printStatus = true,
+    evaluateBetweenEpochs = false
 }
 
 let nnTrainSGD =
@@ -92,7 +92,7 @@ let nnTrainSGD =
       in
       run_batchrounds 0;
       (
-        if params.evaluateBetweenIterations then
+        if params.evaluateBetweenEpochs then
           (
             if params.printStatus then
               printLn "evalating performance..."
