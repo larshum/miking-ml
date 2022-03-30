@@ -5,7 +5,7 @@ include "dataset/mnist.mc"
 
 include "nn/training.mc"
 include "nn/network.mc"
-include "nn-test/numvalid.mc"
+include "./test/numvalid.mc"
 
 let main = lam.
   let argc = length argv in
