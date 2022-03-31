@@ -173,8 +173,9 @@ let #var"tensorOpExn: z = ReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   let m = getInt x_shape 0 in
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
-    let x_i = tensorGetFloat x [i,0] in
-    tensorSetFloat z [i,0] (if gti x_i 0 then x_i else 0.0)
+    let x_i: Float = tensorGetFloat x [i,0] in
+    let relu_x_i: Float = if gti x_i 0 then x_i else 0.0 in
+    tensorSetFloat z [i,0] relu_x_i
   in
   -- apply the iterfun
   parallelLoop m iterfun
