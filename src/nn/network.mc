@@ -108,7 +108,20 @@ let nnCopy: NeuralNetwork -> NeuralNetwork = lam network.
 -- network for a batch of new training samples.
 let nnZeroGrad: NeuralNetwork -> () = lam network.
   use NNStandard in
-  foldl (lam. lam comp. nnComponentZeroGrad comp) () network.components
+  ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
+  let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
+    lam comp: [NeuralNetworkComponent]. lam i: Int.
+    (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
+  in
+  let lengthComponents: [NeuralNetworkComponent] -> Int =
+    lam comp: [NeuralNetworkComponent].
+    (let g: [NeuralNetworkComponent] -> Int = length in g) comp
+  in
+  -------------------------------------------------
+  seqLoop (lengthComponents network.components) (lam i: Int.
+    let comp: NeuralNetworkComponent = getComponent network.components i in
+    nnComponentZeroGrad comp
+  )
 
 
 -- Evaluates the neural network, returning the output vector right before the
@@ -119,6 +132,16 @@ let nnZeroGrad: NeuralNetwork -> () = lam network.
 let nnEvalExn: NeuralNetwork -> Tensor[Float] -> Tensor[Float] =
   lam network. lam input.
   use NNStandard in
+  ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
+  let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
+    lam comp: [NeuralNetworkComponent]. lam i: Int.
+    (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
+  in
+  let lengthComponents: [NeuralNetworkComponent] -> Int =
+    lam comp: [NeuralNetworkComponent].
+    (let g: [NeuralNetworkComponent] -> Int = length in g) comp
+  in
+  -------------------------------------------------
   foldl (lam prevout: Tensor[Float]. lam comp: NeuralNetworkComponent.
     -- Applies this component and returns the resulting output to the next
     -- iteration (the final iteration becomes the nnEvalExn output)
