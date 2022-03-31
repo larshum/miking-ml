@@ -216,7 +216,7 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   seqLoop (length batch) (lam i: Int.
     let dp: DataPoint = get batch i in
     nnBackpropExn network dp
-  ) batch;
+  );
   -- apply the mini-batch normalization ( grad = sum(grad) / |B| )
   let batchsize_normalizer = divf 1.0 (int2float (length batch)) in
   --OLD CODE:
