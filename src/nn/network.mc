@@ -215,6 +215,16 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
 let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   lam network. lam alpha. lam lambda. lam batch.
   use NNStandard in
+  ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
+  let getDataPoint: [DataPoint] -> Int -> DataPoint =
+    lam dp: DataPoint. lam i: Int.
+    (let g: [DataPoint] -> Int -> DataPoint = get in g) dp i
+  in
+  let lengthDataPoints: [DataPoint] -> Int =
+    lam dp: DataPoint.
+    (let g: [DataPoint] -> Int = length in g) dp
+  in
+  -------------------------------------------------
    -- zero out the gradients
   nnZeroGrad network;
   -- backpropagate over the data points
@@ -223,18 +233,18 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
     --  nnBackpropExn network dp
     --) () batch;
   --CUDA'ified CODE:
-  seqLoop (length batch) (lam i: Int.
-    let dp: DataPoint = get batch i in
+  seqLoop (lengthDataPoints batch) (lam i: Int.
+    let dp: DataPoint = getDataPoint batch i in
     nnBackpropExn network dp
   );
-  -- apply the mini-batch normalization ( grad = sum(grad) / |B| )
-  let batchsize_normalizer = divf 1.0 (int2float (length batch)) in
+  -- apply the mini-batch regularization ( grad = sum(grad) / |B| )
+  let batchsize_regularizer = divf 1.0 (int2float (lengthDataPoints batch)) in
   --OLD CODE:
     --foldl (lam. lam grad.
     --  #var"tensorOpExn: z *= scalar(c)" batchsize_normalizer grad
     --) () network.st_gradients;
   -- CUDA'ified code
-  seqLoop (length network.st_gradients) (lam i.
+  seqLoop (lengthSeqFloatTensor network.st_gradients) (lam i.
     let grad = getFloatTensor network.st_gradients i in
     #var"tensorOpExn: z *= scalar(c)" batchsize_normalizer grad
   );
@@ -242,7 +252,7 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   (
     if eqf lambda 0.0 then () -- no regularization to do...
     else (
-      seqLoopAcc () (length network.st_weights) (lam. lam i: Int.
+      seqLoopAcc () (lengthSeqFloatTensor network.st_weights) (lam. lam i: Int.
         let w = getFloatTensor network.st_weights i in
         let grad = getFloatTensor network.st_gradients i in
         #var"tensorOpExn: z += x * scalar(c)" w (mulf 2.0 lambda) grad
@@ -250,7 +260,7 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
     )
   );
   -- apply the gradient descent step (i.e. theta := theta - alpha*theta_grad)
-  seqLoopAcc () (length network.st_weights) (lam. lam i: Int.
+  seqLoopAcc () (lengthSeqFloatTensor network.st_weights) (lam. lam i: Int.
     let w = getFloatTensor network.st_weights i in
     let grad = getFloatTensor network.st_gradients i in
     #var"tensorOpExn: z += x * scalar(c)" grad (negf alpha) w
