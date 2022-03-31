@@ -3,7 +3,7 @@
 -- parallel computations.
 
 
--- Type annotated versions for getting and setting values in tensors
+-- Type annotated versions of intrinsics, needed until a proper type system is in place
 let tensorGetFloat: Tensor[Float] -> [Int] -> Float =
   lam t: Tensor[Float]. lam i: [Int].
   (let g: Tensor[Float] -> [Int] -> Float = tensorGetExn in g) t i
@@ -23,6 +23,10 @@ let getInt: [Int] -> Int -> Int =
 let getFloatTensor: [Tensor[Float]] -> Int -> Tensor[Float] =
   lam l: [Tensor[Float]]. lam i: Int.
   (let g: [Tensor[Float]] -> Int -> Tensor[Float] = get in g) l i
+
+let lengthSeqFloatTensor: [Tensor[Float]] -> Int =
+  lam l: [Tensor[Float]].
+  (let g: [Tensor[Float]] -> Int = length in g) l
 
 
 -- Iterates f n-times passing the incremented number as an argument on each
