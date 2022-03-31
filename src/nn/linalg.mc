@@ -50,7 +50,7 @@ let #var"tensorOpExn: z = Wx+b": Tensor[Float] -> Tensor[Float] -> Tensor[Float]
   let iterfun: Int -> () = lam i.
     -- dot product over the N-dimension
     -- The row below beforms the following operation: v = W_i,* · x^T + b_i
-    let v = seqLoopFoldl (tensorGetFloat b [i,0]) n (lam acc: Float. lam j: Int.
+    let v = seqLoopAcc (tensorGetFloat b [i,0]) n (lam acc: Float. lam j: Int.
       addf acc (mulf (tensorGetFloat w [i,j])
                      (tensorGetFloat x [j,0]))
     ) in
@@ -115,7 +115,7 @@ let #var"tensorOpExn: z = (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor
   let iterfun: Int -> () = lam j.
     -- dot product over x and the j'th column in W
     -- The row below beforms the following operation: v = x · W_*,j
-    let v = seqLoopFoldl 0.0 m (lam acc: Float. lam i: Int.
+    let v = seqLoopAcc 0.0 m (lam acc: Float. lam i: Int.
         addf acc (mulf (tensorGetFloat w [i,j])
                        (tensorGetFloat x [i,0]))
     ) in
@@ -137,7 +137,7 @@ let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tenso
   let iterfun: Int -> () = lam j.
     -- dot product over x and the j'th column in W
     -- The row below beforms the following operation: z_j += v = z_j + x · W_*,j
-    let v = seqLoopFoldl (tensorGetFloat z [j,0]) m (lam acc: Float. lam i: Int.
+    let v = seqLoopAcc (tensorGetFloat z [j,0]) m (lam acc: Float. lam i: Int.
       addf acc (mulf (tensorGetFloat w [i,j])
                      (tensorGetFloat x [i,0]))
     ) in
@@ -199,7 +199,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Tensor[Float] -> Tensor[Float] -> () =
   -- apply the iterfun
   parallelLoop m iterfun;
   -- sum up all the exponentianted values...
-  let expsum = seqLoopFoldl 0.0 m (lam acc: Float. lam i: Int.
+  let expsum = seqLoopAcc 0.0 m (lam acc: Float. lam i: Int.
     addf acc (tensorGetFloat z [i,0])
   ) in
   -- ... and divide it into the exponentiated values to normalize them
@@ -248,7 +248,7 @@ let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Tensor[Float] -> Tensor[Float] -
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
     let p_i = tensorGetFloat p [i,0] in
-    let v = seqLoopFoldl 0.0 m (lam acc: Float. lam j: Int.
+    let v = seqLoopAcc 0.0 m (lam acc: Float. lam j: Int.
       let s_ij = 
         if eqi j i then
           subf p_i (mulf p_i p_i)
