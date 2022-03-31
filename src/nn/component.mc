@@ -33,14 +33,15 @@ lang NNComponentBase
 
   -- Zeros out all the gradients in the component
   sem nnComponentZeroGrad: NeuralNetworkComponent -> ()
-  sem nnComponentZeroGrad =
-  | comp ->
-    let gradients = nnComponentGradients comp in
-    let n_gradients = lengthSeqFloatTensor gradients in
-    seqLoop n_gradients (lam i: Int.
-      let grad = getFloatTensor gradients i in
-      #var"tensorOpExn: z = scalar(c)" 0.0 grad
-    )
+  -- Temp: need to implement this for each component since we cannot yet return sequences
+  --sem nnComponentZeroGrad =
+  --| comp ->
+  --  let gradients = nnComponentGradients comp in
+  --  let n_gradients = lengthSeqFloatTensor gradients in
+  --  seqLoop n_gradients (lam i: Int.
+  --    let grad = getFloatTensor gradients i in
+  --    #var"tensorOpExn: z = scalar(c)" 0.0 grad
+  --  )
 
   -- Returns the input and output dimensions for a component
   sem nnComponentDimensions: NeuralNetworkComponent -> {indim: [Int], outdim: [Int]}
@@ -124,6 +125,11 @@ lang NNFullyConnectedComponent
     -- Set the gradient of the input to this component
     #var"tensorOpExn: z = (x^T * W)^T" output_grad r.w r.in_grad;
     r.in_grad
+  sem nnComponentZeroGrad =
+  | NNFullyConnected r ->
+    #var"tensorOpExn: z = scalar(c)" 0.0 r.w_grad;
+    #var"tensorOpExn: z = scalar(c)" 0.0 r.b_grad;
+    ()
 end
 
 
@@ -133,7 +139,7 @@ end
 --           respect to the loss.
 lang NNReLUComponent
   syn NeuralNetworkComponent =
-  | NNReLU {out_buf: Tensor[Float], in_grad: Tensor[Float], _empty: [Tensor[Float]]}
+  | NNReLU {out_buf: Tensor[Float], in_grad: Tensor[Float]}
 
   sem nnComponentMakeExn (indim: [Int]) (outdim: [Int]) (weights : [Tensor[Float]]) =
   | "ReLU" ->
@@ -142,15 +148,14 @@ lang NNReLUComponent
     --   indim == outdim
     NNReLU {
       out_buf = tensorCreateCArrayFloat outdim (lam. 0.0),
-      in_grad = tensorCreateCArrayFloat indim (lam. 0.0),
-      _empty = []
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0)
     }
 
   sem nnComponentName = | NNReLU _ -> "ReLU"
   sem nnComponentInGrad = | NNReLU r -> r.in_grad
   sem nnComponentOutBuf = | NNReLU r -> r.out_buf
-  sem nnComponentWeights = | NNReLU r -> r._empty
-  sem nnComponentGradients = | NNReLU r -> r._empty
+  sem nnComponentWeights = | NNReLU _ -> (let e: [Tensor[Float]] = [] in e)
+  sem nnComponentGradients = | NNReLU _ -> (let e: [Tensor[Float]] = [] in e)
   sem nnComponentApplyExn (input : Tensor[Float]) =
   | NNReLU r ->
     #var"tensorOpExn: z = ReLU(x)" input r.out_buf;
@@ -160,6 +165,8 @@ lang NNReLUComponent
     -- no weights to increment, just update the input gradient
     #var"tensorOpExn: z = d/dx(l(ReLU(x))" r.out_buf output_grad r.in_grad;
     r.in_grad
+  sem nnComponentZeroGrad =
+  | NNReLU _ -> ()
 end
 
 
@@ -170,7 +177,7 @@ end
 --           respect to the loss.
 lang NNSoftMaxComponent
   syn NeuralNetworkComponent =
-  | NNSoftMax {out_buf: Tensor[Float], in_grad: Tensor[Float], _empty: [Tensor[Float]]}
+  | NNSoftMax {out_buf: Tensor[Float], in_grad: Tensor[Float]}
 
   sem nnComponentMakeExn (indim: [Int]) (outdim: [Int]) (weights : [Tensor[Float]]) =
   | "SoftMax" ->
@@ -179,16 +186,14 @@ lang NNSoftMaxComponent
     --   indim == outdim
     NNSoftMax {
       out_buf = tensorCreateCArrayFloat outdim (lam. 0.0),
-      in_grad = tensorCreateCArrayFloat indim (lam. 0.0),
-      -- TEMP: Since we cannot return an empty list
-      _empty = []
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0)
     }
 
   sem nnComponentName = | NNSoftMax _ -> "SoftMax"
   sem nnComponentInGrad = | NNSoftMax r -> r.in_grad
   sem nnComponentOutBuf = | NNSoftMax r -> r.out_buf
-  sem nnComponentWeights = | NNSoftMax r -> r._empty
-  sem nnComponentGradients = | NNSoftMax r -> r._empty
+  sem nnComponentWeights = | NNSoftMax _ -> (let e: [Tensor[Float]] = [] in e)
+  sem nnComponentGradients = | NNSoftMax _ -> (let e: [Tensor[Float]] = [] in e)
   sem nnComponentApplyExn (input : Tensor[Float]) =
   | NNSoftMax r ->
     #var"tensorOpExn: z = SoftMax(x)" input r.out_buf;
@@ -198,6 +203,8 @@ lang NNSoftMaxComponent
     -- no weights to increment, just update the input gradient
     #var"tensorOpExn: z = d/dx(l(SoftMax(x)))" r.out_buf output_grad r.in_grad;
     r.in_grad
+  sem nnComponentZeroGrad =
+  | NNSoftMax _ -> ()
 end
 
 lang NNStandardComponents = NNComponentBase
