@@ -24,7 +24,7 @@ let _iterateSE: (Int -> ()) -> Int -> () = lam f. lam n.
   in
   iterH 0
 
---/-
+/-
 -- Sequential dummy of the parallelLoop intrinsic
 let parallelLoop: Int -> (Int -> ()) -> () = lam n. lam f. _iterateSE f n
 
