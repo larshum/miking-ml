@@ -95,13 +95,13 @@ lang NNSoftMaxCrossEntropyLossFunction
   sem nnLossFunctionApplyExn (input : Tensor[Float]) (expected: [Int]) =
   | NNSoftMaxCrossEntropyLoss r ->
     #var"tensorOpExn: z = SoftMax(x)" input r.softmax_buf;
-    negf (log (tensorGetExn r.softmax_buf expected))
+    negf (log (tensorGetFloat r.softmax_buf expected))
   sem nnLossFunctionBackpropExn (input: Tensor[Float]) (expected: [Int]) =
   | NNSoftMaxCrossEntropyLoss r ->
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop SoftMaxCrossEntropyLoss: SoftMax(input) - 1Hot(y)
     #var"tensorOpExn: z = SoftMax(x)" input r.in_grad;
-    #var"tensorOpExp: z += 1-Hot(y) * scalar(c)" (get expected 0) (negf 1.0) r.in_grad;
+    #var"tensorOpExp: z += 1-Hot(y) * scalar(c)" (getInt expected 0) (negf 1.0) r.in_grad;
     r.in_grad
 end
 
