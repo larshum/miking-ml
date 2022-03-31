@@ -152,11 +152,11 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   use NNStandard in
   ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
   let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
-    lam comp: NeuralNetworkComponent. lam i: Int.
+    lam comp: [NeuralNetworkComponent]. lam i: Int.
     (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
   in
   let lengthComponents: [NeuralNetworkComponent] -> Int =
-    lam comp: NeuralNetworkComponent.
+    lam comp: [NeuralNetworkComponent].
     (let g: [NeuralNetworkComponent] -> Int = length in g) comp
   in
   -------------------------------------------------
@@ -217,11 +217,11 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   use NNStandard in
   ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
   let getDataPoint: [DataPoint] -> Int -> DataPoint =
-    lam dp: DataPoint. lam i: Int.
+    lam dp: [DataPoint]. lam i: Int.
     (let g: [DataPoint] -> Int -> DataPoint = get in g) dp i
   in
   let lengthDataPoints: [DataPoint] -> Int =
-    lam dp: DataPoint.
+    lam dp: [DataPoint].
     (let g: [DataPoint] -> Int = length in g) dp
   in
   -------------------------------------------------
