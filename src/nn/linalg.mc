@@ -244,7 +244,7 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Tensor[Float] -> Tensor[Float] -> Te
   let m = getInt h_shape 0 in
   -- applies max(0,) for each index
   let iterfun: Int -> () = lam i.
-    let dhds_ii = if gti (tensorGetFloat h [i,0]) 0.0 then 1.0 else 0.0 in
+    let dhds_ii = if gtf (tensorGetFloat h [i,0]) 0.0 then 1.0 else 0.0 in
     let dldh_i = tensorGetFloat dldh [i,0] in
     tensorSetFloat z [i,0] (mulf dhds_ii dldh_i)
   in
