@@ -342,7 +342,8 @@ let #var"tensorOpExn: z += x * scalar(c)": Tensor[Float] -> Float -> Tensor[Floa
 --  z is a Mx1 output vector
 let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Float -> Tensor[Float] -> () =
   lam y. lam c. lam z.
-  let m = get (tensorFloatShape z) 0 in
+  let z_shape: [Int] = tensorFloatShape z in
+  let m = get z_shape 0 in
   -- NOTE(johnwikman, 2022-03-30):
   -- This is a parallel loop to ensure that the tensor operations all occur on
   -- equivalent backends.
