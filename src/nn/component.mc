@@ -147,8 +147,8 @@ lang NNReLUComponent
   sem nnComponentName = | NNReLU _ -> "ReLU"
   sem nnComponentInGrad = | NNReLU r -> r.in_grad
   sem nnComponentOutBuf = | NNReLU r -> r.out_buf
-  sem nnComponentWeights = | NNReLU _ -> []
-  sem nnComponentGradients = | NNReLU _ -> []
+  sem nnComponentWeights = | NNReLU _ -> (let e: [Tensor[Float]] = [] in e)
+  sem nnComponentGradients = | NNReLU _ -> (let e: [Tensor[Float]] = [] in e)
   sem nnComponentApplyExn (input : Tensor[Float]) =
   | NNReLU r ->
     #var"tensorOpExn: z = ReLU(x)" input r.out_buf;
@@ -183,8 +183,8 @@ lang NNSoftMaxComponent
   sem nnComponentName = | NNSoftMax _ -> "SoftMax"
   sem nnComponentInGrad = | NNSoftMax r -> r.in_grad
   sem nnComponentOutBuf = | NNSoftMax r -> r.out_buf
-  sem nnComponentWeights = | NNSoftMax _ -> []
-  sem nnComponentGradients = | NNSoftMax _ -> []
+  sem nnComponentWeights = | NNSoftMax _ -> (let e: [Tensor[Float]] = [] in e)
+  sem nnComponentGradients = | NNSoftMax _ -> (let e: [Tensor[Float]] = [] in e)
   sem nnComponentApplyExn (input : Tensor[Float]) =
   | NNSoftMax r ->
     #var"tensorOpExn: z = SoftMax(x)" input r.out_buf;
