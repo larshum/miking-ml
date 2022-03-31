@@ -37,7 +37,7 @@ lang NNComponentBase
   | comp ->
     let gradients = nnComponentGradients comp in
     let n_gradients = lengthSeqFloatTensor gradients in
-    seqLoop n_gradients (lam i.
+    seqLoop n_gradients (lam i: Int.
       let grad = getFloatTensor gradients i in
       #var"tensorOpExn: z = scalar(c)" 0.0 grad
     )
