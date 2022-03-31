@@ -133,7 +133,7 @@ end
 --           respect to the loss.
 lang NNReLUComponent
   syn NeuralNetworkComponent =
-  | NNReLU {out_buf: Tensor[Float], in_grad: Tensor[Float]}
+  | NNReLU {out_buf: Tensor[Float], in_grad: Tensor[Float], _empty: [Tensor[Float]]}
 
   sem nnComponentMakeExn (indim: [Int]) (outdim: [Int]) (weights : [Tensor[Float]]) =
   | "ReLU" ->
@@ -142,14 +142,15 @@ lang NNReLUComponent
     --   indim == outdim
     NNReLU {
       out_buf = tensorCreateCArrayFloat outdim (lam. 0.0),
-      in_grad = tensorCreateCArrayFloat indim (lam. 0.0)
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0),
+      _empty = []
     }
 
   sem nnComponentName = | NNReLU _ -> "ReLU"
   sem nnComponentInGrad = | NNReLU r -> r.in_grad
   sem nnComponentOutBuf = | NNReLU r -> r.out_buf
-  sem nnComponentWeights = | NNReLU _ -> (let e: [Tensor[Float]] = [] in e)
-  sem nnComponentGradients = | NNReLU _ -> (let e: [Tensor[Float]] = [] in e)
+  sem nnComponentWeights = | NNReLU r -> r._empty
+  sem nnComponentGradients = | NNReLU r -> r._empty
   sem nnComponentApplyExn (input : Tensor[Float]) =
   | NNReLU r ->
     #var"tensorOpExn: z = ReLU(x)" input r.out_buf;
@@ -169,7 +170,7 @@ end
 --           respect to the loss.
 lang NNSoftMaxComponent
   syn NeuralNetworkComponent =
-  | NNSoftMax {out_buf: Tensor[Float], in_grad: Tensor[Float]}
+  | NNSoftMax {out_buf: Tensor[Float], in_grad: Tensor[Float], _empty: [Tensor[Float]]}
 
   sem nnComponentMakeExn (indim: [Int]) (outdim: [Int]) (weights : [Tensor[Float]]) =
   | "SoftMax" ->
@@ -178,14 +179,16 @@ lang NNSoftMaxComponent
     --   indim == outdim
     NNSoftMax {
       out_buf = tensorCreateCArrayFloat outdim (lam. 0.0),
-      in_grad = tensorCreateCArrayFloat indim (lam. 0.0)
+      in_grad = tensorCreateCArrayFloat indim (lam. 0.0),
+      -- TEMP: Since we cannot return an empty list
+      _empty = []
     }
 
   sem nnComponentName = | NNSoftMax _ -> "SoftMax"
   sem nnComponentInGrad = | NNSoftMax r -> r.in_grad
   sem nnComponentOutBuf = | NNSoftMax r -> r.out_buf
-  sem nnComponentWeights = | NNSoftMax _ -> (let e: [Tensor[Float]] = [] in e)
-  sem nnComponentGradients = | NNSoftMax _ -> (let e: [Tensor[Float]] = [] in e)
+  sem nnComponentWeights = | NNSoftMax r -> r._empty
+  sem nnComponentGradients = | NNSoftMax r -> r._empty
   sem nnComponentApplyExn (input : Tensor[Float]) =
   | NNSoftMax r ->
     #var"tensorOpExn: z = SoftMax(x)" input r.out_buf;
