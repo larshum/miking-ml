@@ -17,8 +17,12 @@ let tensorFloatShape: Tensor[Float] -> [Int] =
   (let g: Tensor[Float] -> [Int] = tensorShape in g) t
 
 let getInt: [Int] -> Int -> Int =
-  lam l: [Int]. lam i.
+  lam l: [Int]. lam i: Int.
   (let g: [Int] -> Int -> Int = get in g) l i
+
+let getFloatTensor: [Tensor[Float]] -> Int -> Tensor[Float] =
+  lam l: [Tensor[Float]]. lam i: Int.
+  (let g: [Tensor[Float]] -> Int -> Tensor[Float] = get in g) l i
 
 
 -- Iterates f n-times passing the incremented number as an argument on each
