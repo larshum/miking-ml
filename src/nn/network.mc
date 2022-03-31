@@ -241,12 +241,12 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   let batchsize_regularizer = divf 1.0 (int2float (lengthDataPoints batch)) in
   --OLD CODE:
     --foldl (lam. lam grad.
-    --  #var"tensorOpExn: z *= scalar(c)" batchsize_normalizer grad
+    --  #var"tensorOpExn: z *= scalar(c)" batchsize_regularizer grad
     --) () network.st_gradients;
   -- CUDA'ified code
   seqLoop (lengthSeqFloatTensor network.st_gradients) (lam i.
     let grad = getFloatTensor network.st_gradients i in
-    #var"tensorOpExn: z *= scalar(c)" batchsize_normalizer grad
+    #var"tensorOpExn: z *= scalar(c)" batchsize_regularizer grad
   );
   -- apply any weight regularization
   (
