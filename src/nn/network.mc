@@ -150,12 +150,16 @@ let nnComputeLossExn: NeuralNetwork -> DataPoint -> Float =
 let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   lam network. lam dp.
   use NNStandard in
-  ---- TEMP FUNCTION UNTIL TYPE SYSTEM EXISTS ----
+  ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
   let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
     lam comp: NeuralNetworkComponent. lam i: Int.
     (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
   in
-  ------------------------------------------------
+  let lengthComponents: [NeuralNetworkComponent] -> Int =
+    lam comp: NeuralNetworkComponent.
+    (let g: [NeuralNetworkComponent] -> Int = length in g) comp
+  in
+  -------------------------------------------------
   -- Step 1: Evaluate the network to populate the outputs at each step,
   --         necessary for computing the gradients at each component.
   let outputs = nnEvalExn network dp.input in
@@ -163,7 +167,7 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   let lossgrad = nnLossFunctionBackpropExn outputs dp.correct_outidx network.lossfn in
   -- Step 3: Propagate the gradients backwards
   -- (pair the components with the evaluated inputs to each of those components)
-  let n_components = length network.components in
+  let n_components = lengthComponents network.components in
   if eqi n_components 0 then ()
   else if eqi n_components 1 then (
     -- Special case: last component is the only component (in_buf = dp.input)
