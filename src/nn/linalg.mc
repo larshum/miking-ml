@@ -16,6 +16,10 @@ let tensorFloatShape: Tensor[Float] -> [Int] =
   lam t: Tensor[Float].
   (let g: Tensor[Float] -> [Int] = tensorShape in g) t
 
+let getInt: [Int] -> Int -> Int =
+  lam l: [Int]. lam i.
+  (let g: [Int] -> Int -> Int = get in g) l i
+
 
 -- Iterates f n-times passing the incremented number as an argument on each
 -- iteration. (SE is short for "Side Effect")
@@ -274,7 +278,8 @@ let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Tensor[Float] -> Tensor[Float] -
 --  z is a Mx1 vector
 let #var"tensorOpExn: z += x": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let m = get (tensorFloatShape x) 0 in
+  let x_shape = tensorFloatShape x in
+  let m = getInt x_shape 0 in
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
     tensorSetFloat z [i,0] (
@@ -291,8 +296,9 @@ let #var"tensorOpExn: z += x": Tensor[Float] -> Tensor[Float] -> () =
 --  c is a scalar
 let #var"tensorOpExn: z *= scalar(c)": Float -> Tensor[Float] -> () =
   lam c. lam z.
-  let m = get (tensorFloatShape z) 0 in
-  let n = get (tensorFloatShape z) 1 in
+  let z_shape = tensorFloatShape z in
+  let m = getInt z_shape 0 in
+  let n = getInt z_shape 1 in
   let iterfun: Int -> () = lam i.
     let row = divi i n in
     let col = modi i n in
@@ -308,8 +314,9 @@ let #var"tensorOpExn: z *= scalar(c)": Float -> Tensor[Float] -> () =
 --  c is a scalar
 let #var"tensorOpExn: z = scalar(c)": Float -> Tensor[Float] -> () =
   lam c. lam z.
-  let m = get (tensorFloatShape z) 0 in
-  let n = get (tensorFloatShape z) 1 in
+  let z_shape = tensorFloatShape z in
+  let m = getInt z_shape 0 in
+  let n = getInt z_shape 1 in
   let iterfun: Int -> () = lam i.
     let row = divi i n in
     let col = modi i n in
@@ -324,8 +331,9 @@ let #var"tensorOpExn: z = scalar(c)": Float -> Tensor[Float] -> () =
 --  z is a MxN output matrix/vector
 let #var"tensorOpExn: z += x * scalar(c)": Tensor[Float] -> Float -> Tensor[Float] -> () =
   lam x. lam c. lam z.
-  let m = get (tensorFloatShape x) 0 in
-  let n = get (tensorFloatShape x) 1 in
+  let x_shape = tensorFloatShape x in
+  let m = getInt x_shape 0 in
+  let n = getInt x_shape 1 in
   let iterfun: Int -> () = lam i.
     let row = divi i n in
     let col = modi i n in
@@ -342,9 +350,8 @@ let #var"tensorOpExn: z += x * scalar(c)": Tensor[Float] -> Float -> Tensor[Floa
 --  z is a Mx1 output vector
 let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Float -> Tensor[Float] -> () =
   lam y. lam c. lam z.
-  let z_shape: [Int] = tensorFloatShape z in
-  let intget: [Int] -> Int -> Int = lam l. lam i. (let g: [Int] -> Int -> Int = get in g) l i in
-  let m = intget z_shape 0 in
+  let z_shape = tensorFloatShape z in
+  let m = getInt z_shape 0 in
   -- NOTE(johnwikman, 2022-03-30):
   -- This is a parallel loop to ensure that the tensor operations all occur on
   -- equivalent backends.
