@@ -52,8 +52,9 @@ let seqLoopFoldl: Float -> Int -> (Float -> Int -> Float) -> Float =
 --  z is a Mx1 output vector
 let #var"tensorOpExn: z = Wx+b": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam w. lam x. lam b. lam z.
-  let m = get (tensorFloatShape w) 0 in
-  let n = get (tensorFloatShape w) 1 in
+  let w_shape = tensorFloatShape w in
+  let m = getInt w_shape 0 in
+  let n = getInt w_shape 1 in
   -- iterating function over the M-dimension
   let iterfun: Int -> () = lam i.
     -- dot product over the N-dimension
@@ -73,8 +74,10 @@ let #var"tensorOpExn: z = Wx+b": Tensor[Float] -> Tensor[Float] -> Tensor[Float]
 --  Z is a MxN matrix
 let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam y. lam z.
-  let m = get (tensorFloatShape x) 0 in
-  let n = get (tensorFloatShape y) 0 in
+  let x_shape = tensorFloatShape x in
+  let y_shape = tensorFloatShape y in
+  let m = getInt x_shape 0 in
+  let n = getInt y_shape 0 in
   -- iterating function over all MxN rows and columns
   let iterfun: Int -> () = lam i.
     let row = divi i n in
@@ -94,8 +97,10 @@ let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Flo
 --  Z is a MxN matrix
 let #var"tensorOpExn: z += x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam y. lam z.
-  let m = get (tensorFloatShape x) 0 in
-  let n = get (tensorFloatShape y) 0 in
+  let x_shape = tensorFloatShape x in
+  let y_shape = tensorFloatShape y in
+  let m = getInt x_shape 0 in
+  let n = getInt y_shape 0 in
   -- iterating function over all MxN rows and columns
   let iterfun: Int -> () = lam i.
     let row = divi i n in
@@ -117,8 +122,9 @@ let #var"tensorOpExn: z += x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Fl
 --  z is a Nx1 vector
 let #var"tensorOpExn: z = (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam w. lam z.
-  let m = get (tensorFloatShape x) 0 in
-  let n = get (tensorFloatShape w) 1 in
+  let w_shape = tensorFloatShape w in
+  let m = getInt w_shape 0 in
+  let n = getInt w_shape 1 in
   -- iterating function over the N-dimension in z
   let iterfun: Int -> () = lam j.
     -- dot product over x and the j'th column in W
@@ -139,8 +145,9 @@ let #var"tensorOpExn: z = (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor
 --  z is a Nx1 vector
 let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam w. lam z.
-  let m = get (tensorFloatShape x) 0 in
-  let n = get (tensorFloatShape w) 1 in
+  let w_shape = tensorFloatShape w in
+  let m = getInt w_shape 0 in
+  let n = getInt w_shape 1 in
   -- iterating function over the N-dimension in z
   let iterfun: Int -> () = lam j.
     -- dot product over x and the j'th column in W
@@ -162,7 +169,8 @@ let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tenso
 --  ReLU(x) = [max(0,x_i) | x_i in x]
 let #var"tensorOpExn: z = ReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let m = get (tensorFloatShape x) 0 in
+  let x_shape = tensorFloatShape x in
+  let m = getInt x_shape 0 in
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
     let x_i = tensorGetFloat x [i,0] in
@@ -178,7 +186,8 @@ let #var"tensorOpExn: z = ReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
 --  dReLU(x) = [max(0,sgn(x_i)) | x_i in x]
 let #var"tensorOpExn: z = dReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let m = get (tensorFloatShape x) 0 in
+  let x_shape = tensorFloatShape x in
+  let m = getInt x_shape 0 in
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
     let x_i = tensorGetFloat x [i,0] in
@@ -198,7 +207,8 @@ let #var"tensorOpExn: z = dReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
 --  SoftMax(x) = [exp(x_i) / sum([exp(x_j) | x_j in x]) | x_i in x]
 let #var"tensorOpExn: z = SoftMax(x)": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let m = get (tensorFloatShape x) 0 in
+  let x_shape = tensorFloatShape x in
+  let m = getInt x_shape 0 in
   -- applies exponential function for each index
   let iterfun: Int -> () = lam i.
     let x_i = tensorGetFloat x [i,0] in
@@ -230,7 +240,8 @@ let #var"tensorOpExn: z = SoftMax(x)": Tensor[Float] -> Tensor[Float] -> () =
 --  z_i = dldh_i * dhds_ii
 let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam h. lam dldh. lam z.
-  let m = get (tensorFloatShape h) 0 in
+  let h_shape = tensorFloatShape h in
+  let m = getInt h_shape 0 in
   -- applies max(0,) for each index
   let iterfun: Int -> () = lam i.
     let dhds_ii = if gti (tensorGetFloat h [i,0]) 0.0 then 1.0 else 0.0 in
@@ -252,7 +263,8 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Tensor[Float] -> Tensor[Float] -> Te
 --  z_i = dldp · s_*,i
 let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam p. lam dldp. lam z.
-  let m = get (tensorFloatShape p) 0 in
+  let p_shape = tensorFloatShape p in
+  let m = getInt p_shape 0 in
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
     let p_i = tensorGetFloat p [i,0] in
