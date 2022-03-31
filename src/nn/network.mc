@@ -167,7 +167,7 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   if eqi n_components 0 then ()
   else if eqi n_components 1 then (
     -- Special case: last component is the only component (in_buf = dp.input)
-    let lastcomp = get network.components (subi n_components 1) in
+    let lastcomp = getComponent network.components (subi n_components 1) in
     let lastcomp_in_buf = dp.input in
     let lastcomp_out_grad = lossgrad in
     nnComponentBackpropExn lastcomp_in_buf lastcomp_out_grad lastcomp;
@@ -175,7 +175,7 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   ) else (
     -- At least 2 components...
     -- Last component, special case on output gradient
-    let lastcomp = get network.components (subi n_components 1) in
+    let lastcomp = getComponent network.components (subi n_components 1) in
     let lastcomp_in_buf = getFloatTensor network.st_out_bufs (subi n_components 2) in
     let lastcomp_out_grad = lossgrad in
     let lastcomp_in_grad = nnComponentBackpropExn lastcomp_in_buf lastcomp_out_grad lastcomp in
@@ -185,7 +185,7 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
       -- Iterate in backwards order, skipping over the last element. i is in the range [0, |components| - 2)
       -- compidx = (|components| - 1) - (i+1) = |components| - (i+2)
       let compidx = (subi n_components (addi i 2)) in
-      let comp = get network.components compidx in
+      let comp = getComponent network.components compidx in
       let comp_in_buf = getFloatTensor network.st_out_bufs (subi compidx 1) in
       let comp_out_grad = out_grad in
       -- output gradient is fed
@@ -193,7 +193,7 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
     ) in
 
     -- First component, special case on input buffer
-    let firstcomp = get network.components 0 in
+    let firstcomp = getComponent network.components 0 in
     let firstcomp_in_buf = dp.input in
     nnComponentBackpropExn firstcomp_in_buf firstcomp_out_grad firstcomp;
     ()
