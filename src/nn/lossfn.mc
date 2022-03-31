@@ -64,7 +64,7 @@ lang NNCrossEntropyLossFunction
   | NNCrossEntropyLoss r ->
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop CrossEntropyLoss: [0, ..., 0, -1/p_y, 0, ..., 0]
-    tensorMapInplace (lam. 0.0) r.in_grad;
+    #var"tensorOpExn: z = scalar(c)" 0.0 r.in_grad;
     tensorSetExn r.in_grad expected (divf (negf 1.0) (tensorGetExn input expected));
     r.in_grad
 end

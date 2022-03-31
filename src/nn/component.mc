@@ -36,8 +36,10 @@ lang NNComponentBase
   sem nnComponentZeroGrad =
   | comp ->
     let gradients = nnComponentGradients comp in
-    -- NOTE: Need to reimplement the tensorMapInplace to zero out the gradients (in parallel maybe?)
-    foldl (lam. lam grad. #var"tensorOpExn: z = scalar(c)" 0.0 grad) () gradients
+    seqLoop (length gradients) (lam. lam i.
+      let grad = get gradients i in
+      #var"tensorOpExn: z = scalar(c)" 0.0 grad
+    )
 
   -- Returns the input and output dimensions for a component
   sem nnComponentDimensions: NeuralNetworkComponent -> {indim: [Int], outdim: [Int]}
