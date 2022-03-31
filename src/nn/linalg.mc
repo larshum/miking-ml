@@ -67,7 +67,8 @@ let #var"tensorOpExn: z = Wx+b": Tensor[Float] -> Tensor[Float] -> Tensor[Float]
   let iterfun: Int -> () = lam i.
     -- dot product over the N-dimension
     -- The row below beforms the following operation: v = W_i,* · x^T + b_i
-    let v = seqLoopAcc (tensorGetFloat b [i,0]) n (lam acc: Float. lam j: Int.
+    let acc_init: Float = tensorGetFloat b [i,0] in
+    let v = seqLoopAcc (acc_init) n (lam acc: Float. lam j: Int.
       addf acc (mulf (tensorGetFloat w [i,j])
                      (tensorGetFloat x [j,0]))
     ) in
