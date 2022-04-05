@@ -20,7 +20,11 @@ type NeuralNetwork = {
   -- CUDA/C backend gets better support for allocating new sequences.
   st_weights: [Tensor[Float]],
   st_gradients: [Tensor[Float]],
-  st_out_bufs: [Tensor[Float]]
+  st_out_bufs: [Tensor[Float]],
+  -- These are used for backpropagation
+  st_last_component: NeuralNetworkComponent,
+  st_mid_components_and_idxs_rev: [(NeuralNetworkComponent, Int)],
+  st_first_component: NeuralNetworkComponent
 }
 
 -- A data point is a an input followed by the expected output index
@@ -78,9 +82,17 @@ let nnValidate: NeuralNetwork -> Option [String] =
 -- Refreshes the state variables prefixed with "st_".
 let nnRefreshState: NeuralNetwork -> NeuralNetwork = lam network.
   use NNStandard in
-  {{{network with st_weights = foldl (lam acc. lam c. concat acc (nnComponentWeights c)) [] network.components}
-             with st_gradients = foldl (lam acc. lam c. concat acc (nnComponentGradients c)) [] network.components}
-             with st_out_bufs = map nnComponentOutBuf network.components}
+  {{{{{{network with st_weights = foldl (lam acc. lam c. concat acc (nnComponentWeights c)) [] network.components}
+                with st_gradients = foldl (lam acc. lam c. concat acc (nnComponentGradients c)) [] network.components}
+                with st_out_bufs = map nnComponentOutBuf network.components}
+                with st_last_component = if null network.components then nnReLU 1 else get network.components (subi (length network.components) 1)}
+                with st_mid_components_and_idxs_rev =
+                  if lti (length network.components) 3 then
+                    []
+                  else
+                    reverse (mapi (lam i: Int. lam e: NeuralNetworkComponent. (e, addi i 1))
+                                  (subsequence network.components 1 (subi (length network.components) 2)))}
+                with st_first_component = if null network.components then nnReLU 1 else get network.components 0}
 
 
 -- Creates a neural network based on the provided list of components and a loss
@@ -92,7 +104,10 @@ let nnMake: [NeuralNetworkComponent] -> NeuralNetworkLossFunction -> NeuralNetwo
     lossfn = lossfn,
     st_weights = [],
     st_gradients = [],
-    st_out_bufs = []
+    st_out_bufs = [],
+    st_last_component = nnReLU 1,
+    st_mid_components_and_idxs_rev = [],
+    st_first_component = nnReLU 1
   }
 
 
@@ -106,8 +121,9 @@ let nnCopy: NeuralNetwork -> NeuralNetwork = lam network.
 
 -- Resets all the gradients in the neural network to zero, preparing the
 -- network for a batch of new training samples.
-let nnZeroGrad: NeuralNetwork -> () = lam network.
+let nnZeroGrad: NeuralNetwork -> () = lam network: NeuralNetwork.
   use NNStandard in
+  /-
   ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
   let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
     lam comp: [NeuralNetworkComponent]. lam i: Int.
@@ -121,7 +137,15 @@ let nnZeroGrad: NeuralNetwork -> () = lam network.
   seqLoop (lengthComponents network.components) (lam i: Int.
     let comp: NeuralNetworkComponent = getComponent network.components i in
     nnComponentZeroGrad comp
-  )
+  )-/
+  let ret: Int =
+    (let g: (Int -> NeuralNetworkComponent -> Int)
+         -> Int
+         -> [NeuralNetworkComponent]
+         -> Int = foldl in g)
+    /-foldl-/ (lam x: Int. lam comp: NeuralNetworkComponent. nnComponentZeroGrad comp; 0) 0 network.components
+  in
+  ()
 
 
 -- Evaluates the neural network, returning the output vector right before the
@@ -132,17 +156,11 @@ let nnZeroGrad: NeuralNetwork -> () = lam network.
 let nnEvalExn: NeuralNetwork -> Tensor[Float] -> Tensor[Float] =
   lam network. lam input.
   use NNStandard in
-  ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
-  let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
-    lam comp: [NeuralNetworkComponent]. lam i: Int.
-    (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
-  in
-  let lengthComponents: [NeuralNetworkComponent] -> Int =
-    lam comp: [NeuralNetworkComponent].
-    (let g: [NeuralNetworkComponent] -> Int = length in g) comp
-  in
-  -------------------------------------------------
-  foldl (lam prevout: Tensor[Float]. lam comp: NeuralNetworkComponent.
+  (let g: (Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float])
+       -> Tensor[Float]
+       -> [NeuralNetworkComponent]
+       -> Tensor[Float] = foldl in g)
+  /- foldl -/ (lam prevout: Tensor[Float]. lam comp: NeuralNetworkComponent.
     -- Applies this component and returns the resulting output to the next
     -- iteration (the final iteration becomes the nnEvalExn output)
     nnComponentApplyExn prevout comp
@@ -171,13 +189,13 @@ let nnComputeLossExn: NeuralNetwork -> DataPoint -> Float =
 -- NOTE: If this is the first time computing gradients in this step, remember
 --       to run `nnZeroGrad <network>` to clear the previous gradients.
 let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
-  lam network. lam dp.
+  lam network: NeuralNetwork. lam dp: DataPoint.
   use NNStandard in
   ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
-  let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
-    lam comp: [NeuralNetworkComponent]. lam i: Int.
-    (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
-  in
+  --let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
+  --  lam comp: [NeuralNetworkComponent]. lam i: Int.
+  --  (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
+  --in
   let lengthComponents: [NeuralNetworkComponent] -> Int =
     lam comp: [NeuralNetworkComponent].
     (let g: [NeuralNetworkComponent] -> Int = length in g) comp
@@ -185,44 +203,56 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   -------------------------------------------------
   -- Step 1: Evaluate the network to populate the outputs at each step,
   --         necessary for computing the gradients at each component.
-  let outputs = nnEvalExn network dp.input in
+  let outputs: Tensor[Float] = nnEvalExn network dp.input in
   -- Step 2: Compute gradient with respect to the loss function
-  let lossgrad = nnLossFunctionBackpropExn outputs dp.correct_outidx network.lossfn in
+  let lossgrad: Tensor[Float] = nnLossFunctionBackpropExn outputs dp.correct_outidx network.lossfn in
   -- Step 3: Propagate the gradients backwards
   -- (pair the components with the evaluated inputs to each of those components)
-  let n_components = lengthComponents network.components in
+  let n_components: Int = lengthComponents network.components in
   if eqi n_components 0 then ()
   else if eqi n_components 1 then (
     -- Special case: last component is the only component (in_buf = dp.input)
-    let lastcomp = getComponent network.components (subi n_components 1) in
-    let lastcomp_in_buf = dp.input in
-    let lastcomp_out_grad = lossgrad in
-    nnComponentBackpropExn lastcomp_in_buf lastcomp_out_grad lastcomp;
+    -- let lastcomp = getComponent network.components (subi n_components 1) in
+    -- let lastcomp_in_buf = dp.input in
+    -- let lastcomp_out_grad = lossgrad in
+    nnComponentBackpropExn dp.input lossgrad network.st_last_component;
     ()
   ) else (
     -- At least 2 components...
     -- Last component, special case on output gradient
-    let lastcomp = getComponent network.components (subi n_components 1) in
-    let lastcomp_in_buf = getFloatTensor network.st_out_bufs (subi n_components 2) in
-    let lastcomp_out_grad = lossgrad in
-    let lastcomp_in_grad = nnComponentBackpropExn lastcomp_in_buf lastcomp_out_grad lastcomp in
+    --let lastcomp = getComponent network.components (subi n_components 1) in
+    let lastcomp_in_buf: Tensor[Float] = getFloatTensor network.st_out_bufs (subi n_components 2) in
+    --let lastcomp_out_grad = lossgrad in
+    --let lastcomp_in_grad = nnComponentBackpropExn lastcomp_in_buf lastcomp_out_grad lastcomp in
 
-    -- Middle components, iterate over all component not at the start or at the end
-    let firstcomp_out_grad = seqLoopAcc lastcomp_in_grad (subi n_components 2) (lam out_grad. lam i.
-      -- Iterate in backwards order, skipping over the last element. i is in the range [0, |components| - 2)
-      -- compidx = (|components| - 1) - (i+1) = |components| - (i+2)
-      let compidx = (subi n_components (addi i 2)) in
-      let comp = getComponent network.components compidx in
-      let comp_in_buf = getFloatTensor network.st_out_bufs (subi compidx 1) in
-      let comp_out_grad = out_grad in
-      -- output gradient is fed
-      nnComponentBackpropExn comp_in_buf comp_out_grad comp
-    ) in
+    let lastcomp_in_grad: Tensor[Float] = nnComponentBackpropExn lastcomp_in_buf lossgrad network.st_last_component in
+
+    -- Middle components, iterate backwards over all components not at the
+    -- start nor at the end
+    let firstcomp_out_grad =
+      let foldfun: Tensor[Float] -> (NeuralNetworkComponent, Int) -> Tensor[Float] = lam out_grad: Tensor[Float]. lam comp_idx_pair: (NeuralNetworkComponent, Int).
+        let comp_in_buf: Tensor[Float] = getFloatTensor network.st_out_bufs (subi comp_idx_pair.1 1) in
+        let comp_out_grad: Tensor[Float] = out_grad in
+        -- output gradient is fed into the next iteration
+        nnComponentBackpropExn comp_in_buf comp_out_grad comp_idx_pair.0
+      in
+      (let g: (Tensor[Float] -> (NeuralNetworkComponent, Int) -> Tensor[Float])
+           -> Tensor[Float]
+           -> [(NeuralNetworkComponent, Int)]
+           -> Tensor[Float] = foldl in g)
+      foldfun
+      /- foldl (lam out_grad: Tensor[Float]. lam comp_idx_pair: (NeuralNetworkComponent, Int).
+        let comp_in_buf: Tensor[Float] = getFloatTensor network.st_out_bufs (subi comp_idx_pair.1 1) in
+        let comp_out_grad: Tensor[Float] = out_grad in
+        -- output gradient is fed into the next iteration
+        nnComponentBackpropExn comp_in_buf comp_out_grad comp_idx_pair.0
+      )-/ lastcomp_in_grad network.st_mid_components_and_idxs_rev
+    in
 
     -- First component, special case on input buffer
-    let firstcomp = getComponent network.components 0 in
+    --let firstcomp = getComponent network.components 0 in
     let firstcomp_in_buf = dp.input in
-    nnComponentBackpropExn firstcomp_in_buf firstcomp_out_grad firstcomp;
+    nnComponentBackpropExn firstcomp_in_buf firstcomp_out_grad network.st_first_component;
     ()
   )
 
@@ -252,9 +282,9 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   nnZeroGrad network;
   -- backpropagate over the data points
   --OLD CODE:
-    --foldl (lam. lam dp: DataPoint.
-    --  nnBackpropExn network dp
-    --) () batch;
+  --foldl (lam. lam dp: DataPoint.
+  --  nnBackpropExn network dp
+  --) () batch;
   --CUDA'ified CODE:
   seqLoop (lengthDataPoints batch) (lam i: Int.
     let dp: DataPoint = getDataPoint batch i in
@@ -267,7 +297,7 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
     --  #var"tensorOpExn: z *= scalar(c)" batchsize_regularizer grad
     --) () network.st_gradients;
   -- CUDA'ified code
-  seqLoop (lengthSeqFloatTensor network.st_gradients) (lam i.
+  seqLoop (lengthSeqFloatTensor network.st_gradients) (lam i: Int.
     let grad = getFloatTensor network.st_gradients i in
     #var"tensorOpExn: z *= scalar(c)" batchsize_regularizer grad
   );
@@ -275,7 +305,7 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   (
     if eqf lambda 0.0 then () -- no regularization to do...
     else (
-      seqLoopAcc () (lengthSeqFloatTensor network.st_weights) (lam. lam i: Int.
+      seqLoop (lengthSeqFloatTensor network.st_weights) (lam i: Int.
         let w = getFloatTensor network.st_weights i in
         let grad = getFloatTensor network.st_gradients i in
         #var"tensorOpExn: z += x * scalar(c)" w (mulf 2.0 lambda) grad
@@ -283,7 +313,7 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
     )
   );
   -- apply the gradient descent step (i.e. theta := theta - alpha*theta_grad)
-  seqLoopAcc () (lengthSeqFloatTensor network.st_weights) (lam. lam i: Int.
+  seqLoop (lengthSeqFloatTensor network.st_weights) (lam i: Int.
     let w = getFloatTensor network.st_weights i in
     let grad = getFloatTensor network.st_gradients i in
     #var"tensorOpExn: z += x * scalar(c)" grad (negf alpha) w

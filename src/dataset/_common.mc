@@ -16,7 +16,7 @@ include "../nn/network.mc" -- DataPoint type
 --  dim: The dimensionality of a datapoint.
 --  tensorCreate: The function used to create a tensor (i.e. dense or C array).
 --  filename: The file to load the datapoints from.
-let datasetLoadGenericIntclassInt2Float: Bool -> (Int -> Float) -> [Int] -> ([Int] -> [Float] -> Tensor[Float]) -> String -> [DataPoint] =
+let datasetLoadGenericIntclassInt2Float: Bool -> (Int -> Float) -> [Int] -> ([Int] -> ([Int] -> Float) -> Tensor[Float]) -> String -> [DataPoint] =
   lam print_status. lam convfn. lam dim. lam tensorCreate. lam filename.
   printLn (join ["reading file ", filename, "..."]);
   let contents = readFile filename in
@@ -33,8 +33,8 @@ let datasetLoadGenericIntclassInt2Float: Bool -> (Int -> Float) -> [Int] -> ([In
     match updated_tuple with (current_acc, current_strrep) in
     if eqChar c '\n' then
       -- Convert the current accumulation to a new datapoint
-      let class = head current_acc in
-      let normalized_values = map convfn (tail current_acc) in
+      let class: Int = head current_acc in
+      let normalized_values: [Float] = map convfn (tail current_acc) in
       let dp: DataPoint = {
         input = tensorOfSeqExn tensorCreate dim normalized_values,
         correct_outidx = [class,0]

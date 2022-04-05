@@ -102,6 +102,7 @@ let nnTrainSGD =
           let batch = mkbatch [] 0 in
           -- This will have to be accelerated...
           accelerate (nnGradientDescentExn network alpha lambda batch);
+          --nnGradientDescentExn network alpha lambda batch;
           run_batchrounds (addi rnd 1)
         )
       in

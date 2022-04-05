@@ -27,7 +27,7 @@ let datasetMnistClass2string: Int -> String = lam i.
 -- 784x1 Float tensor/vector that contains the values for each pixel at a gray
 -- scale level, where the value is normalized to a float in [0,1] instead of an
 -- integer between [0,255].
-let datasetLoadMnist: ([Int] -> [Float] -> Tensor[Float]) -> String -> [DataPoint] = lam tensorCreate. lam filename.
+let datasetLoadMnist: ([Int] -> ([Int] -> Float) -> Tensor[Float]) -> String -> [DataPoint] = lam tensorCreate. lam filename.
   let print_status = true in
   let convfn = lam i. divf (int2float i) 255.0 in
   let dim = [784,1] in

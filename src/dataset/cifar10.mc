@@ -38,7 +38,7 @@ let datasetCifar10Class2string: Int -> String = lam i.
 -- 3072x1 Float tensor/vector that contains the values for each pixel at each
 -- level, where the value is normalized to a float in [0,1] instead of an
 -- integer between [0,255].
-let datasetLoadCifar10: ([Int] -> [Float] -> Tensor[Float]) -> String -> [DataPoint] = lam tensorCreate. lam filename.
+let datasetLoadCifar10: ([Int] -> ([Int] -> Float) -> Tensor[Float]) -> String -> [DataPoint] = lam tensorCreate. lam filename.
   let print_status = true in
   let convfn = lam i. divf (int2float i) 255.0 in
   let dim = [3072,1] in
