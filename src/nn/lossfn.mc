@@ -65,7 +65,7 @@ lang NNCrossEntropyLossFunction
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop CrossEntropyLoss: [0, ..., 0, -1/p_y, 0, ..., 0]
     #var"tensorOpExn: z = scalar(c)" 0.0 r.in_grad;
-    tensorSetFloat r.in_grad expected (divf (negf 1.0) (tensorGetFloat input expected));
+    tensorSetExn r.in_grad expected (divf (negf 1.0) (tensorGetExn input expected));
     r.in_grad
 end
 
@@ -95,13 +95,13 @@ lang NNSoftMaxCrossEntropyLossFunction
   sem nnLossFunctionApplyExn (input : Tensor[Float]) (expected: [Int]) =
   | NNSoftMaxCrossEntropyLoss r ->
     #var"tensorOpExn: z = SoftMax(x)" input r.softmax_buf;
-    negf (log (tensorGetFloat r.softmax_buf expected))
+    negf (log (tensorGetExn r.softmax_buf expected))
   sem nnLossFunctionBackpropExn (input: Tensor[Float]) (expected: [Int]) =
   | NNSoftMaxCrossEntropyLoss r ->
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop SoftMaxCrossEntropyLoss: SoftMax(input) - 1Hot(y)
     #var"tensorOpExn: z = SoftMax(x)" input r.in_grad;
-    #var"tensorOpExp: z += 1-Hot(y) * scalar(c)" (getInt expected 0) (negf 1.0) r.in_grad;
+    #var"tensorOpExp: z += 1-Hot(y) * scalar(c)" (get expected 0) (negf 1.0) r.in_grad;
     r.in_grad
 end
 

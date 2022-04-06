@@ -3,36 +3,6 @@
 -- parallel computations.
 
 
--- Type annotated versions of intrinsics, needed until a proper type system is in place
-let tensorGetFloat: Tensor[Float] -> [Int] -> Float =
-  lam t: Tensor[Float]. lam i: [Int].
-  (let g: Tensor[Float] -> [Int] -> Float = tensorGetExn in g) t i
-
-let tensorSetFloat: Tensor[Float] -> [Int] -> Float -> () =
-  lam t: Tensor[Float]. lam i: [Int]. lam v: Float.
-  (let g: Tensor[Float] -> [Int] -> Float -> () = tensorSetExn in g) t i v
-
-let tensorLinearGetFloat: Tensor[Float] -> Int -> Float =
-  lam t: Tensor[Float]. lam i: Int.
-  (let g: Tensor[Float] -> Int -> Float = tensorLinearGetExn in g) t i
-
-let tensorLinearSetFloat: Tensor[Float] -> Int -> Float -> () =
-  lam t: Tensor[Float]. lam i: Int. lam v: Float.
-  (let g: Tensor[Float] -> Int -> Float -> () = tensorLinearSetExn in g) t i v
-
-let getInt: [Int] -> Int -> Int =
-  lam l: [Int]. lam i: Int.
-  (let g: [Int] -> Int -> Int = get in g) l i
-
-let getFloatTensor: [Tensor[Float]] -> Int -> Tensor[Float] =
-  lam l: [Tensor[Float]]. lam i: Int.
-  (let g: [Tensor[Float]] -> Int -> Tensor[Float] = get in g) l i
-
-let lengthSeqFloatTensor: [Tensor[Float]] -> Int =
-  lam l: [Tensor[Float]].
-  (let g: [Tensor[Float]] -> Int = length in g) l
-
-
 -- Iterates f n-times passing the incremented number as an argument on each
 -- iteration. (SE is short for "Side Effect")
 let _iterateSE: (Int -> ()) -> Int -> () = lam f. lam n.
@@ -325,8 +295,8 @@ let #var"tensorOpExn: z *= scalar(c)": Float -> Tensor[Float] -> () =
   let m = get z_shape 0 in
   let n = get z_shape 1 in
   let iterfun: Int -> () = lam i.
-    tensorLinearSetFloat z i (
-      mulf (tensorLinearGetFloat z i) c
+    tensorLinearSetExn z i (
+      mulf (tensorLinearGetExn z i) c
     )
   in
   parallelLoop (muli m n) iterfun
@@ -341,7 +311,7 @@ let #var"tensorOpExn: z = scalar(c)": Float -> Tensor[Float] -> () =
   let m = get z_shape 0 in
   let n = get z_shape 1 in
   let iterfun: Int -> () = lam i.
-    tensorLinearSetFloat z i c
+    tensorLinearSetExn z i c
   in
   parallelLoop (muli m n) iterfun
 
@@ -356,9 +326,9 @@ let #var"tensorOpExn: z += x * scalar(c)": Tensor[Float] -> Float -> Tensor[Floa
   let m = get x_shape 0 in
   let n = get x_shape 1 in
   let iterfun: Int -> () = lam i.
-    tensorLinearSetFloat z i (
-      addf (tensorLinearGetFloat z i)
-           (mulf (tensorLinearGetFloat x i) c)
+    tensorLinearSetExn z i (
+      addf (tensorLinearGetExn z i)
+           (mulf (tensorLinearGetExn x i) c)
     )
   in
   parallelLoop (muli m n) iterfun

@@ -134,16 +134,6 @@ let nnComputeLossExn: NeuralNetwork -> DataPoint -> Float =
 let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   lam network: NeuralNetwork. lam dp: DataPoint.
   use NNStandard in
-  ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
-  let getComponent: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent =
-    lam comp: [NeuralNetworkComponent]. lam i: Int.
-    (let g: [NeuralNetworkComponent] -> Int -> NeuralNetworkComponent = get in g) comp i
-  in
-  let lengthComponents: [NeuralNetworkComponent] -> Int =
-    lam comp: [NeuralNetworkComponent].
-    (let g: [NeuralNetworkComponent] -> Int = length in g) comp
-  in
-  -------------------------------------------------
   -- Step 1: Evaluate the network to populate the outputs at each step,
   --         necessary for computing the gradients at each component.
   let outputs: Tensor[Float] = nnEvalExn network dp.input in
@@ -151,17 +141,17 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   let lossgrad: Tensor[Float] = nnLossFunctionBackpropExn outputs dp.correct_outidx network.lossfn in
   -- Step 3: Propagate the gradients backwards
   -- (pair the components with the evaluated inputs to each of those components)
-  let n_components: Int = lengthComponents network.components in
+  let n_components: Int = length network.components in
   if eqi n_components 0 then ()
   else if eqi n_components 1 then (
     -- Special case: last component is the only component (in_buf = dp.input)
-    let lastcomp = getComponent network.components 0 in
+    let lastcomp = get network.components 0 in
     nnComponentBackpropExn dp.input lossgrad lastcomp;
     ()
   ) else (
     -- At least 2 components...
     -- Last component, special case on output gradient
-    let lastcomp = getComponent network.components (subi n_components 1) in
+    let lastcomp = get network.components (subi n_components 1) in
     let lastcomp_in_buf: Tensor[Float] = nnComponentOutBuf (get network.components (subi n_components 2)) in
     --let lastcomp_out_grad = lossgrad in
     --let lastcomp_in_grad = nnComponentBackpropExn lastcomp_in_buf lastcomp_out_grad lastcomp in
@@ -177,14 +167,14 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
         let idx = subi n_components (addi i 2) in
         let previdx = subi idx 1 in
 
-        let comp: NeuralNetworkComponent = getComponent network.components idx in
-        let in_buf: Tensor[Float] = nnComponentOutBuf (getComponent network.components previdx) in
+        let comp: NeuralNetworkComponent = get network.components idx in
+        let in_buf: Tensor[Float] = nnComponentOutBuf (get network.components previdx) in
         nnComponentBackpropExn in_buf out_grad comp
       )
     in
 
     -- First component, special case on input buffer
-    let firstcomp: NeuralNetworkComponent = getComponent network.components 0 in
+    let firstcomp: NeuralNetworkComponent = get network.components 0 in
     let firstcomp_in_buf: Tensor[Float] = dp.input in
     nnComponentBackpropExn firstcomp_in_buf firstcomp_out_grad firstcomp;
     ()
@@ -202,12 +192,6 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
 let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
   lam network. lam alpha. lam lambda. lam batch.
   use NNStandard in
-  ---- TEMP FUNCTIONS UNTIL TYPE SYSTEM EXISTS ----
-  let lengthDataPoints: [DataPoint] -> Int =
-    lam dp: [DataPoint].
-    (let g: [DataPoint] -> Int = length in g) dp
-  in
-  -------------------------------------------------
    -- zero out the gradients
   nnZeroGrad network;
   -- backpropagate over the data points
@@ -215,7 +199,7 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
     nnBackpropExn network dp; 0
   ) 0 batch;
   -- apply the mini-batch regularization ( grad = sum(grad) / |B| )
-  let batchsize_regularizer = divf 1.0 (int2float (lengthDataPoints batch)) in
+  let batchsize_regularizer = divf 1.0 (int2float (length batch)) in
   foldl (lam x: Int. lam comp: NeuralNetworkComponent.
     -- TEMP: Would like to just iterate over the gradients at this stage...
     nnComponent_TEMP_ScaleGradients batchsize_regularizer comp; 0
