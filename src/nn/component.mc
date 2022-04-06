@@ -28,12 +28,21 @@ lang NNComponentBase
   sem nnComponentGradients: NeuralNetworkComponent -> [Tensor[Float]]
   sem nnComponentApplyExn: Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float]
   sem nnComponentBackpropExn: Tensor[Float] -> Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float]
+  -- NOTE: These are temporary functions since we cannot yet return a sequence
+  --       of tensors within the accelerate context.
+  sem nnComponent_TEMP_SetGradients: Float -> NeuralNetworkComponent -> ()
+  sem nnComponent_TEMP_ScaleGradients: Float -> NeuralNetworkComponent -> ()
+  sem nnComponent_TEMP_ApplyGradients: Float -> NeuralNetworkComponent -> ()
+  sem nnComponent_TEMP_L2Regularize: Float -> NeuralNetworkComponent -> ()
 
   -- Standard semantics that do not need to be implemented by specific components
 
   -- Zeros out all the gradients in the component
   sem nnComponentZeroGrad: NeuralNetworkComponent -> ()
-  -- Temp: need to implement this for each component since we cannot yet return sequences
+  sem nnComponentZeroGrad =
+  | comp -> nnComponent_TEMP_SetGradients 0.0 comp
+  -- Temp: use the syupp below when we can get a sequence of tensors within
+  -- accelerate
   --sem nnComponentZeroGrad =
   --| comp ->
   --  let gradients = nnComponentGradients comp in
@@ -125,11 +134,23 @@ lang NNFullyConnectedComponent
     -- Set the gradient of the input to this component
     #var"tensorOpExn: z = (x^T * W)^T" output_grad r.w r.in_grad;
     r.in_grad
-  sem nnComponentZeroGrad =
+
+  sem nnComponent_TEMP_SetGradients scalar =
   | NNFullyConnected r ->
-    #var"tensorOpExn: z = scalar(c)" 0.0 r.w_grad;
-    #var"tensorOpExn: z = scalar(c)" 0.0 r.b_grad;
-    ()
+    #var"tensorOpExn: z = scalar(c)" scalar r.w_grad;
+    #var"tensorOpExn: z = scalar(c)" scalar r.b_grad
+  sem nnComponent_TEMP_ScaleGradients scalar =
+  | NNFullyConnected r ->
+    #var"tensorOpExn: z *= scalar(c)" scalar r.w_grad;
+    #var"tensorOpExn: z *= scalar(c)" scalar r.b_grad
+  sem nnComponent_TEMP_ApplyGradients scalar =
+  | NNFullyConnected r ->
+    #var"tensorOpExn: z += x * scalar(c)" r.w_grad scalar r.w;
+    #var"tensorOpExn: z += x * scalar(c)" r.b_grad scalar r.b
+  sem nnComponent_TEMP_L2Regularize scalar =
+  | NNFullyConnected r ->
+    #var"tensorOpExn: z += x * scalar(c)" r.w scalar r.w_grad;
+    #var"tensorOpExn: z += x * scalar(c)" r.b scalar r.b_grad
 end
 
 
@@ -165,8 +186,11 @@ lang NNReLUComponent
     -- no weights to increment, just update the input gradient
     #var"tensorOpExn: z = d/dx(l(ReLU(x))" r.out_buf output_grad r.in_grad;
     r.in_grad
-  sem nnComponentZeroGrad =
-  | NNReLU _ -> ()
+
+  sem nnComponent_TEMP_SetGradients scalar =   | NNReLU _ -> ()
+  sem nnComponent_TEMP_ScaleGradients scalar = | NNReLU _ -> ()
+  sem nnComponent_TEMP_ApplyGradients scalar = | NNReLU _ -> ()
+  sem nnComponent_TEMP_L2Regularize scalar =   | NNReLU _ -> ()
 end
 
 
@@ -203,8 +227,11 @@ lang NNSoftMaxComponent
     -- no weights to increment, just update the input gradient
     #var"tensorOpExn: z = d/dx(l(SoftMax(x)))" r.out_buf output_grad r.in_grad;
     r.in_grad
-  sem nnComponentZeroGrad =
-  | NNSoftMax _ -> ()
+
+  sem nnComponent_TEMP_SetGradients scalar =   | NNSoftMax _ -> ()
+  sem nnComponent_TEMP_ScaleGradients scalar = | NNSoftMax _ -> ()
+  sem nnComponent_TEMP_ApplyGradients scalar = | NNSoftMax _ -> ()
+  sem nnComponent_TEMP_L2Regularize scalar =   | NNSoftMax _ -> ()
 end
 
 lang NNStandardComponents = NNComponentBase
