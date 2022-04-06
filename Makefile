@@ -57,7 +57,7 @@ _data/mnist-t10k-100.txt:
 	python3 preprocessing/mnist-binary-preprocess.py _data/dl/t10k-images-idx3-ubyte _data/dl/t10k-labels-idx1-ubyte _data/mnist-t10k-100.txt 100
 
 test-cuda: _data/mnist-train-600.txt _data/mnist-t10k-100.txt
-	mi compile --accelerate-cuda src/main.mc
-	./main mnist _data/mnist-train-600.txt _data/mnist-t10k-100.txt
 	mi compile --accelerate-cuda benchmarks/mnist/bm-mnist.mc
 	./bm-mnist _data/mnist-train-600.txt _data/mnist-t10k-100.txt
+	mi compile --accelerate-cuda src/main.mc
+	./main mnist _data/mnist-train-600.txt _data/mnist-t10k-100.txt
