@@ -12,6 +12,14 @@ let tensorSetFloat: Tensor[Float] -> [Int] -> Float -> () =
   lam t: Tensor[Float]. lam i: [Int]. lam v: Float.
   (let g: Tensor[Float] -> [Int] -> Float -> () = tensorSetExn in g) t i v
 
+let tensorLinearGetFloat: Tensor[Float] -> Int -> Float =
+  lam t: Tensor[Float]. lam i: Int.
+  (let g: Tensor[Float] -> Int -> Float = tensorLinearGetExn in g) t i
+
+let tensorLinearSetFloat: Tensor[Float] -> Int -> Float -> () =
+  lam t: Tensor[Float]. lam i: Int. lam v: Float.
+  (let g: Tensor[Float] -> Int -> Float -> () = tensorLinearSetExn in g) t i v
+
 let tensorFloatShape: Tensor[Float] -> [Int] =
   lam t: Tensor[Float].
   (let g: Tensor[Float] -> [Int] = tensorShape in g) t
@@ -321,10 +329,8 @@ let #var"tensorOpExn: z *= scalar(c)": Float -> Tensor[Float] -> () =
   let m = getInt z_shape 0 in
   let n = getInt z_shape 1 in
   let iterfun: Int -> () = lam i.
-    let row = divi i n in
-    let col = modi i n in
-    tensorSetFloat z [row,col] (
-      mulf (tensorGetFloat z [row,col]) c
+    tensorLinearSetFloat z i (
+      mulf (tensorLinearGetFloat z i) c
     )
   in
   parallelLoop (muli m n) iterfun
@@ -339,9 +345,7 @@ let #var"tensorOpExn: z = scalar(c)": Float -> Tensor[Float] -> () =
   let m = getInt z_shape 0 in
   let n = getInt z_shape 1 in
   let iterfun: Int -> () = lam i.
-    let row = divi i n in
-    let col = modi i n in
-    tensorSetFloat z [row,col] c
+    tensorLinearSetFloat z i c
   in
   parallelLoop (muli m n) iterfun
 
@@ -356,11 +360,9 @@ let #var"tensorOpExn: z += x * scalar(c)": Tensor[Float] -> Float -> Tensor[Floa
   let m = getInt x_shape 0 in
   let n = getInt x_shape 1 in
   let iterfun: Int -> () = lam i.
-    let row = divi i n in
-    let col = modi i n in
-    tensorSetFloat z [row,col] (
-      addf (tensorGetFloat z [row,col])
-           (mulf (tensorGetFloat x [row,col]) c)
+    tensorLinearSetFloat z i (
+      addf (tensorLinearGetFloat z i)
+           (mulf (tensorLinearGetFloat x i) c)
     )
   in
   parallelLoop (muli m n) iterfun
