@@ -12,6 +12,7 @@ def uint32_from_be(bs):
 
 if len(sys.argv) not in [4, 5]:
     print(f"usage: {sys.argv[0]} <binary data file> <binary label file> <target ASCII file> [length divisor]")
+    sys.exit(1)
 
 bin_datafile = sys.argv[1]
 bin_labelfile = sys.argv[2]
