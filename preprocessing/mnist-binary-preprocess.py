@@ -10,12 +10,15 @@ def uint32_from_be(bs):
     assert len(bs) == 4
     return struct.unpack(">I", bs)[0]
 
-if len(sys.argv) != 4:
-    print(f"usage: {sys.argv[0]} <binary data file> <binary label file> <target ASCII file>")
+if len(sys.argv) not in [4, 5]:
+    print(f"usage: {sys.argv[0]} <binary data file> <binary label file> <target ASCII file> [length divisor]")
 
 bin_datafile = sys.argv[1]
 bin_labelfile = sys.argv[2]
 outfile = sys.argv[3]
+len_divisor = 1
+if len(sys.argv) == 4:
+    len_divisor = int(sys.argv[4])
 
 datapoints = []
 
@@ -24,7 +27,7 @@ with open(bin_datafile, "rb") as f:
     bs = f.read()
     magic_number = uint32_from_be(bs[0:4])
     assert magic_number == 2051, f"Invalid magic number {magic_number}, expected 2051"
-    n_images = uint32_from_be(bs[4:8])
+    n_images = uint32_from_be(bs[4:8]) // len_divisor
     rows = uint32_from_be(bs[8:12])
     cols = uint32_from_be(bs[12:16])
     assert rows == 28, f"Expected number of rows to be 28, got {rows}"
