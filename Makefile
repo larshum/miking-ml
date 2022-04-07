@@ -61,3 +61,7 @@ test-cuda: _data/mnist-train-600.txt _data/mnist-t10k-100.txt
 	./bm-mnist _data/mnist-train-600.txt _data/mnist-t10k-100.txt
 	mi compile --accelerate-cuda src/main.mc
 	./main mnist _data/mnist-train-600.txt _data/mnist-t10k-100.txt
+
+test-mnist:
+	mi compile --accelerate-cuda benchmarks/mnist/bm-mnist.mc
+	stdbuf -o0 ./bm-mnist _data/mnist-train.txt _data/mnist-t10k.txt

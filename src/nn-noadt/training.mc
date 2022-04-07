@@ -56,65 +56,64 @@ let nnTrainSGD =
       printLn (join [" - lambda decay: ", float2string params.decay_lambda])
     else ()
   );
+  accelerate -- -/
   (
-    if params.evaluateBeforeFirstEpoch then
-      (
+    (
+      if params.evaluateBeforeFirstEpoch then
+        (
+          if params.printStatus then
+            print "evalating performance...\n"
+          else ()
+        );
+        let accuracy = nnAccuracyProportion params.printStatus network validation_data in
         if params.printStatus then
-          printLn "evalating performance..."
+          print "Computed accuracy: "; printFloat (mulf accuracy 100.0); print "%\n"
         else ()
-      );
-      let accuracy = nnAccuracyProportion params.printStatus network validation_data in
-      if params.printStatus then
-        printLn (join ["Computed accuracy: ", float2string (mulf accuracy 100.0), "%"])
       else ()
-    else ()
-  );
-  recursive let iterate = lam it. lam alpha. lam lambda.
-    if eqi it params.epochs then () else (
+    );
+    seqLoopAcc (params.init_alpha, params.init_lambda) params.epochs (lam acc: (Float, Float). lam epoch_idx.
+      let epoch: Int = addi epoch_idx 1 in
+      let alpha: Float = acc.0 in
+      let lambda: Float = acc.1 in
       (
         if params.printStatus then
-          printLn (join ["[Iteration ", int2string (addi it 1), "/", int2string params.epochs, "]"]);
-          printLn (join ["alpha = ", float2string alpha]);
-          printLn (join ["lambda = ", float2string lambda])
+          print "[Iteration "; printFloat (int2float epoch); print "/"; printFloat (int2float params.epochs); print "]\n";
+          print "[alpha = "; printFloat alpha; print "]\n";
+          print "[lambda = "; printFloat lambda; print "]\n"
         else ()
       );
-      accelerate (
-        seqLoop rounds (lam rnd.
-          ( -- print round count (on a single line)
-            if params.printStatus then (
-              print "."
-              --print (join ["\rround ", int2string (addi rnd 1), "/", int2string rounds]);
-              --flushStdout ()
-            ) else ()
-          );
-
-          let start_idx = muli rnd params.batchsize in
-          let end_idx = addi start_idx params.batchsize in
-          let end_idx = if gti end_idx (length training_data) then (length training_data) else end_idx in
-          nnGradientDescentIndexedExn network alpha lambda training_data start_idx end_idx
-        )
+      seqLoop rounds (lam rnd.
+        ( -- print round count (on a single line)
+          if params.printStatus then (
+            print "\rround "; printFloat (int2float (addi rnd 1)); print "/"; printFloat (int2float rounds)
+          ) else ()
+        );
+        let start_idx = muli rnd params.batchsize in
+        let end_idx = addi start_idx params.batchsize in
+        let end_idx = if gti end_idx (length training_data) then (length training_data) else end_idx in
+        nnGradientDescentIndexedExn network alpha lambda training_data start_idx end_idx
       );
-      printLn "";
+      print "\n";
       (
         if params.evaluateBetweenEpochs then
           (
             if params.printStatus then
-              printLn "evalating performance..."
+              print "evalating performance...\n"
             else ()
           );
           let accuracy = nnAccuracyProportion params.printStatus network validation_data in
           if params.printStatus then
-            printLn (join ["Computed accuracy: ", float2string (mulf accuracy 100.0), "%"])
+            print "Computed accuracy: "; printFloat (mulf accuracy 100.0); print "%\n"
           else ()
         else ()
       );
       -- prepare for the next iteration
       let decayed_alpha = mulf alpha (subf 1.0 params.decay_alpha) in
       let decayed_lambda = mulf lambda (subf 1.0 params.decay_lambda) in
-      iterate (addi it 1) decayed_alpha decayed_lambda
-    )
-  in
-  iterate 0 params.init_alpha params.init_lambda;
+      (decayed_alpha, decayed_lambda)
+    );
+    ()
+  );
   ( -- final printout
     if params.printStatus then
       printLn "SGD complete."

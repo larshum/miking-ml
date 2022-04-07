@@ -37,7 +37,8 @@ let datasetLoadGenericIntclassInt2Float: Bool -> (Int -> Float) -> [Int] -> ([In
       let normalized_values: [Float] = map convfn (tail current_acc) in
       let dp: DataPoint = {
         input = tensorOfSeqExn tensorCreate dim normalized_values,
-        correct_outidx = [class,0]
+        correct_outidx = [class,0],
+        correct_linear_outidx = class
       } in
       (if print_status then print (join ["\rpoints scanned: ", int2string (addi (length converted) 1)]); flushStdout () else ());
       (snoc converted dp, [], "")

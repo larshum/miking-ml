@@ -20,7 +20,8 @@ type NeuralNetwork = {
 -- A data point is a an input followed by the expected output index
 type DataPoint = {
   input: Tensor[Float],
-  correct_outidx: [Int]
+  correct_outidx: [Int],
+  correct_linear_outidx: Int
 }
 
 -- Validates a neural network. Returns `None ()` if the network is well-formed.
