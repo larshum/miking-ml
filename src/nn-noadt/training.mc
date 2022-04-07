@@ -78,18 +78,13 @@ let nnTrainSGD =
           printLn (join ["lambda = ", float2string lambda])
         else ()
       );
-      recursive let run_batchrounds = lam rnd.
-        if eqi rnd rounds then (
-          ( -- LF after the round counter
-            if params.printStatus then
-              printLn ""
-            else ()
-          )
-        ) else (
+      accelerate (
+        seqLoop rounds (lam rnd.
           ( -- print round count (on a single line)
             if params.printStatus then (
-              print (join ["\rround ", int2string (addi rnd 1), "/", int2string rounds]);
-              flushStdout ()
+              print "."
+              --print (join ["\rround ", int2string (addi rnd 1), "/", int2string rounds]);
+              --flushStdout ()
             ) else ()
           );
           recursive let mkbatch = lam acc. lam j.
@@ -101,12 +96,14 @@ let nnTrainSGD =
           in
           let batch = mkbatch [] 0 in
           -- This will have to be accelerated...
-          accelerate (nnGradientDescentExn network alpha lambda batch);
-          --nnGradientDescentExn network alpha lambda batch;
-          run_batchrounds (addi rnd 1)
+
+          let start_idx = muli rnd params.batchsize in
+          let end_idx = addi start_idx params.batchsize in
+          let end_idx = if gti end_idx (length training_data) then (length training_data) else end_idx in
+          nnGradientDescentIndexedExn network alpha lambda training_data start_idx end_idx
         )
-      in
-      run_batchrounds 0;
+      );
+      printLn "";
       (
         if params.evaluateBetweenEpochs then
           (

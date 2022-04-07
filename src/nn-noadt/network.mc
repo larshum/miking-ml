@@ -180,26 +180,20 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
     ()
   )
 
-
--- Trains the network on the provided batch of data points, performing gradient
--- descent on the batch normalized output
---  network is the NN to train on
---  alpha is the learning rate
---  lambda is the regularization factor for fully connected layers, should be
---         in the range [0,1], where a value of 0.0 represents no
---         regularization
---  batch is the list of data points to train on, applies mini-batch
-let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
-  lam network. lam alpha. lam lambda. lam batch.
+let nnGradientDescentIndexedExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> Int -> Int -> () =
+  lam network. lam alpha. lam lambda. lam dataset. lam start_idx. lam end_idx.
   use NNStandard in
    -- zero out the gradients
   nnZeroGrad network;
+  -- Batch size
+  let batchsize = subi end_idx start_idx in
   -- backpropagate over the data points
-  foldl (lam x: Int. lam dp: DataPoint.
-    nnBackpropExn network dp; 0
-  ) 0 batch;
+  seqLoop batchsize (lam offset: Int.
+    let idx: Int = addi start_idx offset in
+    nnBackpropExn network (get dataset idx)
+  );
   -- apply the mini-batch regularization ( grad = sum(grad) / |B| )
-  let batchsize_regularizer = divf 1.0 (int2float (length batch)) in
+  let batchsize_regularizer = divf 1.0 (int2float batchsize) in
   foldl (lam x: Int. lam comp: NeuralNetworkComponent.
     -- TEMP: Would like to just iterate over the gradients at this stage...
     nnComponent_TEMP_ScaleGradients batchsize_regularizer comp; 0
@@ -219,3 +213,15 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
     nnComponent_TEMP_ApplyGradients (negf alpha) comp; 0
   ) 0 network.components;
   ()
+
+-- Trains the network on the provided batch of data points, performing gradient
+-- descent on the batch normalized output
+--  network is the NN to train on
+--  alpha is the learning rate
+--  lambda is the regularization factor for fully connected layers, should be
+--         in the range [0,1], where a value of 0.0 represents no
+--         regularization
+--  batch is the list of data points to train on, applies mini-batch
+let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
+  lam network. lam alpha. lam lambda. lam batch.
+  nnGradientDescentIndexedExn network alpha lambda batch 0 (length batch)
