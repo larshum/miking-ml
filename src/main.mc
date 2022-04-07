@@ -3,8 +3,8 @@
 include "dataset/cifar10.mc"
 include "dataset/mnist.mc"
 
-include "nn/training.mc"
-include "nn/network.mc"
+include "nn-noadt/training.mc"
+include "nn-noadt/network.mc"
 include "./test/numvalid.mc"
 
 let main = lam.
