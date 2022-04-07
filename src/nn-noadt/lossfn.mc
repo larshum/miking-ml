@@ -47,9 +47,10 @@ let nnLossFunctionInGrad: NeuralNetworkLossFunction -> Tensor[Float] = lam lossf
 
 let nnLossFunctionApplyExn: Tensor[Float] -> [Int] -> NeuralNetworkLossFunction -> Float =
   lam input: Tensor[Float]. lam expected: [Int]. lam lossfn: NeuralNetworkLossFunction.
-  if eqi lossfn.ty nnLossfnType_CrossEntropyLoss then (
+  let ty: Int = lossfn.ty in
+  if eqi ty nnLossfnType_CrossEntropyLoss then (
     negf (log (tensorGetExn input expected))
-  ) else if eqi lossfn.ty nnLossfnType_SoftMaxCrossEntropyLoss then (
+  ) else if eqi ty nnLossfnType_SoftMaxCrossEntropyLoss then (
     #var"tensorOpExn: z = SoftMax(x)" input lossfn.softmax_buf;
     negf (log (tensorGetExn lossfn.softmax_buf expected))
   ) else (
@@ -58,13 +59,14 @@ let nnLossFunctionApplyExn: Tensor[Float] -> [Int] -> NeuralNetworkLossFunction 
 
 let nnLossFunctionBackpropExn: Tensor[Float] -> [Int] -> NeuralNetworkLossFunction -> Tensor[Float] =
   lam input: Tensor[Float]. lam expected: [Int]. lam lossfn: NeuralNetworkLossFunction.
-  if eqi lossfn.ty nnLossfnType_CrossEntropyLoss then (
+  let ty: Int = lossfn.ty in
+  if eqi ty nnLossfnType_CrossEntropyLoss then (
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop CrossEntropyLoss: [0, ..., 0, -1/p_y, 0, ..., 0]
     #var"tensorOpExn: z = scalar(c)" 0.0 lossfn.in_grad;
     tensorSetExn lossfn.in_grad expected (divf (negf 1.0) (tensorGetExn input expected));
     lossfn.in_grad
-  ) else if eqi lossfn.ty nnLossfnType_SoftMaxCrossEntropyLoss then (
+  ) else if eqi ty nnLossfnType_SoftMaxCrossEntropyLoss then (
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop SoftMaxCrossEntropyLoss: SoftMax(input) - 1Hot(y)
     #var"tensorOpExn: z = SoftMax(x)" input lossfn.in_grad;

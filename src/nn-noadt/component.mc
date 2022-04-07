@@ -94,13 +94,14 @@ let nnComponentGradients: NeuralNetworkComponent -> [Tensor[Float]] = lam comp.
 
 let nnComponentApplyExn: Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float] =
   lam input: Tensor[Float]. lam comp: NeuralNetworkComponent.
-  if eqi comp.ty nnCompType_FullyConnected then (
+  let ty = comp.ty in
+  if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: z = Wx+b" comp.w input comp.b comp.out_buf;
     comp.out_buf
-  ) else if eqi comp.ty nnCompType_ReLU then (
+  ) else if eqi ty nnCompType_ReLU then (
     #var"tensorOpExn: z = ReLU(x)" input comp.out_buf;
     comp.out_buf
-  ) else if eqi comp.ty nnCompType_SoftMax then (
+  ) else if eqi ty nnCompType_SoftMax then (
     #var"tensorOpExn: z = SoftMax(x)" input comp.out_buf;
     comp.out_buf
   ) else (
@@ -109,7 +110,8 @@ let nnComponentApplyExn: Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float
 
 let nnComponentBackpropExn: Tensor[Float] -> Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float] =
   lam comp_input: Tensor[Float]. lam output_grad: Tensor[Float]. lam comp: NeuralNetworkComponent.
-  if eqi comp.ty nnCompType_FullyConnected then (
+  let ty = comp.ty in
+  if eqi ty nnCompType_FullyConnected then (
     -- Backpropagate on the Bias
     #var"tensorOpExn: z += x" output_grad comp.b_grad;
     -- Backpropagate on the Weights
@@ -117,11 +119,11 @@ let nnComponentBackpropExn: Tensor[Float] -> Tensor[Float] -> NeuralNetworkCompo
     -- Set the gradient of the input to this component
     #var"tensorOpExn: z = (x^T * W)^T" output_grad comp.w comp.in_grad;
     comp.in_grad
-  ) else if eqi comp.ty nnCompType_ReLU then (
+  ) else if eqi ty nnCompType_ReLU then (
     -- no weights to increment, just update the input gradient
     #var"tensorOpExn: z = d/dx(l(ReLU(x))" comp.out_buf output_grad comp.in_grad;
     comp.in_grad
-  ) else if eqi comp.ty nnCompType_SoftMax then (
+  ) else if eqi ty nnCompType_SoftMax then (
     -- no weights to increment, just update the input gradient
     #var"tensorOpExn: z = d/dx(l(SoftMax(x)))" comp.out_buf output_grad comp.in_grad;
     comp.in_grad
@@ -131,28 +133,32 @@ let nnComponentBackpropExn: Tensor[Float] -> Tensor[Float] -> NeuralNetworkCompo
 
 let nnComponent_TEMP_SetGradients: Float -> NeuralNetworkComponent -> () =
   lam scalar: Float. lam comp: NeuralNetworkComponent.
-  if eqi comp.ty nnCompType_FullyConnected then (
+  let ty = comp.ty in
+  if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: z = scalar(c)" scalar comp.w_grad;
     #var"tensorOpExn: z = scalar(c)" scalar comp.b_grad
   ) else ()
 
 let nnComponent_TEMP_ScaleGradients: Float -> NeuralNetworkComponent -> () =
   lam scalar: Float. lam comp: NeuralNetworkComponent.
-  if eqi comp.ty nnCompType_FullyConnected then (
+  let ty = comp.ty in
+  if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: z *= scalar(c)" scalar comp.w_grad;
     #var"tensorOpExn: z *= scalar(c)" scalar comp.b_grad
   ) else ()
 
 let nnComponent_TEMP_ApplyGradients: Float -> NeuralNetworkComponent -> () =
   lam scalar: Float. lam comp: NeuralNetworkComponent.
-  if eqi comp.ty nnCompType_FullyConnected then (
+  let ty = comp.ty in
+  if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: z += x * scalar(c)" comp.w_grad scalar comp.w;
     #var"tensorOpExn: z += x * scalar(c)" comp.b_grad scalar comp.b
   ) else ()
 
 let nnComponent_TEMP_L2Regularize: Float -> NeuralNetworkComponent -> () =
   lam scalar: Float. lam comp: NeuralNetworkComponent.
-  if eqi comp.ty nnCompType_FullyConnected then (
+  let ty = comp.ty in
+  if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: z += x * scalar(c)" comp.w scalar comp.w_grad;
     #var"tensorOpExn: z += x * scalar(c)" comp.b scalar comp.b_grad
   ) else ()
