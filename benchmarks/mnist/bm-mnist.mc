@@ -3,8 +3,8 @@
 
 include "common.mc"
 
-include "../../src/nn/network.mc"
-include "../../src/nn/training.mc"
+include "../../src/nn-noadt/network.mc"
+include "../../src/nn-noadt/training.mc"
 
 include "../../src/dataset/mnist.mc"
 
