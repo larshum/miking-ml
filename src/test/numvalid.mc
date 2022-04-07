@@ -86,7 +86,8 @@ let nntestNumericalValidation = lam.
   printLn "└──────────────────────────────┘";
   let dp: DataPoint = {
     input = tensorCreateCArrayFloat [4,1] (lam idx. int2float (addi (get idx 0) 1)),
-    correct_outidx = [1,0]
+    correct_outidx = [1,0],
+    correct_linear_outidx = 1
   } in
   let network: NeuralNetwork =
     nnMake [nnFullyConnected 4 6,
