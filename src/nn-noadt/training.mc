@@ -87,15 +87,6 @@ let nnTrainSGD =
               --flushStdout ()
             ) else ()
           );
-          recursive let mkbatch = lam acc. lam j.
-            if eqi j params.batchsize then acc else (
-              -- select a datapoint uniformly at random
-              let dp = get training_data (randIntU 0 (length training_data)) in
-              mkbatch (cons dp acc) (addi j 1)
-            )
-          in
-          let batch = mkbatch [] 0 in
-          -- This will have to be accelerated...
 
           let start_idx = muli rnd params.batchsize in
           let end_idx = addi start_idx params.batchsize in
