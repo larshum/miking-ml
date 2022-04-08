@@ -19,7 +19,7 @@ type SGDParameters = {
 
 let nnVanillaSGDParameters: SGDParameters = {
     init_alpha = 0.9,
-    init_lambda = 0.01,
+    init_lambda = 0.00,
     decay_alpha = 0.1,
     decay_lambda = 0.1,
     batchsize = 32,

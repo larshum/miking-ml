@@ -120,7 +120,7 @@ let nnComputeLossExn: NeuralNetwork -> DataPoint -> Float =
   use NNStandard in
   let output = nnEvalExn network dp.input in
   -- Return the evaluated loss
-  nnLossFunctionApplyExn output dp.correct_outidx network.lossfn
+  nnLossFunctionApplyExn output dp.correct_linear_outidx network.lossfn
 
 
 -- Computes the gradients for the components with respect to the loss function,
@@ -139,7 +139,7 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   --         necessary for computing the gradients at each component.
   let outputs: Tensor[Float] = nnEvalExn network dp.input in
   -- Step 2: Compute gradient with respect to the loss function
-  let lossgrad: Tensor[Float] = nnLossFunctionBackpropExn outputs dp.correct_outidx network.lossfn in
+  let lossgrad: Tensor[Float] = nnLossFunctionBackpropExn outputs dp.correct_linear_outidx network.lossfn in
   -- Step 3: Propagate the gradients backwards
   -- (pair the components with the evaluated inputs to each of those components)
   let n_components: Int = length network.components in

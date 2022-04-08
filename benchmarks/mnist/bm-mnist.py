@@ -40,7 +40,7 @@ def main():
             print("error: cannot run with CUDA backend when it is not available")
             sys.exit(1)
         # CUDA settings
-        cuda_kwargs = {"num_workers": 1,
+        cuda_kwargs = {"num_workers": 128,
                        "pin_memory": True,
                        "shuffle": True}
         training_kwargs.update(cuda_kwargs)

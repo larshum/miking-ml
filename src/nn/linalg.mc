@@ -41,12 +41,12 @@ let #var"tensorOpExn: z = Wx+b": Tensor[Float] -> Tensor[Float] -> Tensor[Float]
   let iterfun: Int -> () = lam i.
     -- dot product over the N-dimension
     -- The row below beforms the following operation: v = W_i,* · x^T + b_i
-    let acc_init: Float = tensorGetExn b [i,0] in
+    let acc_init: Float = tensorLinearGetExn b i in
     let v = seqLoopAcc (acc_init) n (lam acc: Float. lam j: Int.
-      addf acc (mulf (tensorGetExn w [i,j])
-                     (tensorGetExn x [j,0]))
+      addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
+                     (tensorLinearGetExn x j))
     ) in
-    tensorSetExn z [i,0] v -- z_i = v = W_i,* · x^T + b_i
+    tensorLinearSetExn z i v -- z_i = v = W_i,* · x^T + b_i
   in
   -- apply the iterfun
   parallelLoop m iterfun
@@ -66,9 +66,9 @@ let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Flo
     let row = divi i n in
     let col = modi i n in
     -- z_jk = x_j * y_k
-    tensorSetExn z [row,col] (
-      mulf (tensorGetExn x [row,0])
-           (tensorGetExn y [col,0])
+    tensorLinearSetExn z i (
+      mulf (tensorLinearGetExn x row)
+           (tensorLinearGetExn y col)
     )
   in
   -- apply the iterfun
@@ -89,10 +89,10 @@ let #var"tensorOpExn: z += x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Fl
     let row = divi i n in
     let col = modi i n in
     -- z_jk += x_j * y_k
-    tensorSetExn z [row,col] (
-      addf (tensorGetExn z [row,col])
-           (mulf (tensorGetExn x [row,0])
-                 (tensorGetExn y [col,0]))
+    tensorLinearSetExn z i (
+      addf (tensorLinearGetExn z i)
+           (mulf (tensorLinearGetExn x row)
+                 (tensorLinearGetExn y col))
     )
   in
   -- apply the iterfun
@@ -113,10 +113,10 @@ let #var"tensorOpExn: z = (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor
     -- dot product over x and the j'th column in W
     -- The row below beforms the following operation: v = x · W_*,j
     let v = seqLoopAcc 0.0 m (lam acc: Float. lam i: Int.
-        addf acc (mulf (tensorGetExn w [i,j])
-                       (tensorGetExn x [i,0]))
+        addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
+                       (tensorLinearGetExn x i))
     ) in
-    tensorSetExn z [j,0] v -- z_j = v = x · W_*,j
+    tensorLinearSetExn z j v -- z_j = v = x · W_*,j
   in
   -- apply the iterfun
   parallelLoop n iterfun
@@ -135,11 +135,11 @@ let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tenso
   let iterfun: Int -> () = lam j.
     -- dot product over x and the j'th column in W
     -- The row below beforms the following operation: z_j += v = z_j + x · W_*,j
-    let v = seqLoopAcc (tensorGetExn z [j,0]) m (lam acc: Float. lam i: Int.
-      addf acc (mulf (tensorGetExn w [i,j])
-                     (tensorGetExn x [i,0]))
+    let v = seqLoopAcc (tensorLinearGetExn z j) m (lam acc: Float. lam i: Int.
+      addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
+                     (tensorLinearGetExn x i))
     ) in
-    tensorSetExn z [j,0] v -- z_j = v = z_j + (x · W_*,j)  =>  z_j += x · W_*,j
+    tensorLinearSetExn z j v -- z_j = v = z_j + (x · W_*,j)  =>  z_j += x · W_*,j
   in
   -- apply the iterfun
   parallelLoop n iterfun
@@ -156,8 +156,8 @@ let #var"tensorOpExn: z = ReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   let m = get x_shape 0 in
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
-    let x_i: Float = tensorGetExn x [i,0] in
-    tensorSetExn z [i,0] (if gtf x_i 0.0 then x_i else 0.0)
+    let x_i: Float = tensorLinearGetExn x i in
+    tensorLinearSetExn z i (if gtf x_i 0.0 then x_i else 0.0)
   in
   -- apply the iterfun
   parallelLoop m iterfun
@@ -173,8 +173,8 @@ let #var"tensorOpExn: z = dReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   let m = get x_shape 0 in
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
-    let x_i = tensorGetExn x [i,0] in
-    tensorSetExn z [i,0] (if gti x_i 0 then 1.0 else 0.0)
+    let x_i = tensorLinearGetExn x i in
+    tensorLinearSetExn z i (if gti x_i 0 then 1.0 else 0.0)
   in
   -- apply the iterfun
   parallelLoop m iterfun
@@ -194,19 +194,19 @@ let #var"tensorOpExn: z = SoftMax(x)": Tensor[Float] -> Tensor[Float] -> () =
   let m = get x_shape 0 in
   -- applies exponential function for each index
   let iterfun: Int -> () = lam i.
-    let x_i = tensorGetExn x [i,0] in
-    tensorSetExn z [i,0] (exp x_i)
+    let x_i = tensorLinearGetExn x i in
+    tensorLinearSetExn z i (exp x_i)
   in
   -- apply the iterfun
   parallelLoop m iterfun;
   -- sum up all the exponentianted values...
   let expsum = seqLoopAcc 0.0 m (lam acc: Float. lam i: Int.
-    addf acc (tensorGetExn z [i,0])
+    addf acc (tensorLinearGetExn z i)
   ) in
   -- ... and divide it into the exponentiated values to normalize them
   let iterfunNormalize: Int -> () = lam i.
-    let z_i = tensorGetExn z [i,0] in
-    tensorSetExn z [i,0] (divf z_i expsum)
+    let z_i = tensorLinearGetExn z i in
+    tensorLinearSetExn z i (divf z_i expsum)
   in
   -- apply the normalization iterfun
   parallelLoop m iterfunNormalize
@@ -227,9 +227,9 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Tensor[Float] -> Tensor[Float] -> Te
   let m = get h_shape 0 in
   -- applies max(0,) for each index
   let iterfun: Int -> () = lam i.
-    let dhds_ii = if gtf (tensorGetExn h [i,0]) 0.0 then 1.0 else 0.0 in
-    let dldh_i = tensorGetExn dldh [i,0] in
-    tensorSetExn z [i,0] (mulf dhds_ii dldh_i)
+    let dhds_ii = if gtf (tensorLinearGetExn h i) 0.0 then 1.0 else 0.0 in
+    let dldh_i = tensorLinearGetExn dldh i in
+    tensorLinearSetExn z i (mulf dhds_ii dldh_i)
   in
   -- apply the iterfun
   parallelLoop m iterfun
@@ -250,19 +250,19 @@ let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Tensor[Float] -> Tensor[Float] -
   let m = get p_shape 0 in
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
-    let p_i = tensorGetExn p [i,0] in
+    let p_i = tensorLinearGetExn p i in
     let v = seqLoopAcc 0.0 m (lam acc: Float. lam j: Int.
       let s_ij = 
         if eqi j i then
           subf p_i (mulf p_i p_i)
         else
-          let p_j = tensorGetExn p [j,0] in
+          let p_j = tensorLinearGetExn p j in
           negf (mulf p_i p_j)
       in
-      let dldp_j = tensorGetExn dldp [j,0] in
+      let dldp_j = tensorLinearGetExn dldp j in
       addf acc (mulf dldp_j s_ij)
     ) in
-    tensorSetExn z [i,0] v
+    tensorLinearSetExn z i v
   in
   -- apply the iterfun
   parallelLoop m iterfun
@@ -277,9 +277,9 @@ let #var"tensorOpExn: z += x": Tensor[Float] -> Tensor[Float] -> () =
   let m = get x_shape 0 in
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
-    tensorSetExn z [i,0] (
-        addf (tensorGetExn z [i,0])
-             (tensorGetExn x [i,0])
+    tensorLinearSetExn z i (
+        addf (tensorLinearGetExn z i)
+             (tensorLinearGetExn x i)
     )
   in
   -- apply the iterfun
@@ -345,8 +345,8 @@ let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Float -> Tensor[Float] 
   -- This is a parallel loop to ensure that the tensor operations all occur on
   -- equivalent backends.
   let iterfun: Int -> () = lam.
-    tensorSetExn z [y,0] (
-      addf (tensorGetExn z [y,0]) c
+    tensorLinearSetExn z y (
+      addf (tensorLinearGetExn z y) c
     )
   in
   parallelLoop 1 iterfun

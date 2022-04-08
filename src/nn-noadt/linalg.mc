@@ -14,6 +14,8 @@ let _iterateSE: (Int -> ()) -> Int -> () = lam f. lam n.
   in
   iterH 0
 
+let tensorSize: Tensor[Float] -> Int = lam t. foldl (lam acc. lam e. muli acc e) 1 (tensorShape t)
+
 /-
 -- Sequential dummy of the parallelLoop intrinsic
 let parallelLoop: Int -> (Int -> ()) -> () = lam n. lam f. _iterateSE f n
@@ -28,10 +30,10 @@ let seqLoopFoldl: Float -> Int -> (Float -> Int -> Float) -> Float =
 -- -/
 
 -- Applies the operation z = Wx + b where
---  W is a MxN matrix
---  x is a Nx1 vector
---  b is a Mx1 vector
---  z is a Mx1 output vector
+--  W is a MxN-dim matrix
+--  x is a N-dim vector
+--  b is a M-dim vector
+--  z is a M-dim output vector
 let #var"tensorOpExn: z = Wx+b": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam w. lam x. lam b. lam z.
   let w_shape = tensorShape w in
@@ -52,15 +54,14 @@ let #var"tensorOpExn: z = Wx+b": Tensor[Float] -> Tensor[Float] -> Tensor[Float]
   parallelLoop m iterfun
 
 -- Applies the operation Z = x * y^T where
---  x is a Mx1 vector
---  y is a Nx1 vector
---  Z is a MxN matrix
+--  x is a M-dim vector
+--  y is a N-dim vector
+--  Z is a MxN-dim matrix
 let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam y. lam z.
-  let x_shape = tensorShape x in
-  let y_shape = tensorShape y in
-  let m = get x_shape 0 in
-  let n = get y_shape 0 in
+  let z_shape = tensorShape z in
+  let m = get z_shape 0 in
+  let n = get z_shape 1 in
   -- iterating function over all MxN rows and columns
   let iterfun: Int -> () = lam i.
     let row = divi i n in
@@ -75,15 +76,14 @@ let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Flo
   parallelLoop (muli m n) iterfun
 
 -- Applies the operation Z += x * y^T where
---  x is a Mx1 vector
---  y is a Nx1 vector
+--  x is a M-dim vector
+--  y is a N-dim vector
 --  Z is a MxN matrix
 let #var"tensorOpExn: z += x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam y. lam z.
-  let x_shape = tensorShape x in
-  let y_shape = tensorShape y in
-  let m = get x_shape 0 in
-  let n = get y_shape 0 in
+  let z_shape = tensorShape z in
+  let m = get z_shape 0 in
+  let n = get z_shape 1 in
   -- iterating function over all MxN rows and columns
   let iterfun: Int -> () = lam i.
     let row = divi i n in
@@ -100,9 +100,9 @@ let #var"tensorOpExn: z += x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Fl
 
 
 -- Applies the operation z = (x^T * W)^T where
---  x is a Mx1 vector
+--  x is a M-dim vector
 --  W is a MxN matrix
---  z is a Nx1 vector
+--  z is a N-dim vector
 let #var"tensorOpExn: z = (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam w. lam z.
   let w_shape = tensorShape w in
@@ -123,9 +123,9 @@ let #var"tensorOpExn: z = (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor
 
 
 -- Applies the operation z += (x^T * W)^T where
---  x is a Mx1 vector
+--  x is a M-dim vector
 --  W is a MxN matrix
---  z is a Nx1 vector
+--  z is a N-dim vector
 let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam w. lam z.
   let w_shape = tensorShape w in
@@ -146,14 +146,13 @@ let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tenso
 
 
 -- Applies the operation z = ReLU(x) where
---  x is a Mx1 vector
---  z is a Mx1 vector
+--  x is an arbitrary tensor
+--  z is an output tensor with the same shape as x
 -- and
 --  ReLU(x) = [max(0,x_i) | x_i in x]
 let #var"tensorOpExn: z = ReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let x_shape = tensorShape x in
-  let m = get x_shape 0 in
+  let m = tensorSize x in
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
     let x_i: Float = tensorLinearGetExn x i in
@@ -163,14 +162,13 @@ let #var"tensorOpExn: z = ReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   parallelLoop m iterfun
 
 -- Applies the operation z = dReLU(x) where
---  x is a Mx1 vector
---  z is a Mx1 vector
+--  x is an arbitrary tensor
+--  z is an output tensor with the same shape as x
 -- and
 --  dReLU(x) = [max(0,sgn(x_i)) | x_i in x]
 let #var"tensorOpExn: z = dReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let x_shape = tensorShape x in
-  let m = get x_shape 0 in
+  let m = tensorSize x in
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
     let x_i = tensorLinearGetExn x i in
@@ -184,14 +182,13 @@ let #var"tensorOpExn: z = dReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
 
 
 -- Applies the operation z = SoftMax(x) where
---  x is a Mx1 vector
---  z is a Mx1 vector
+--  x is an arbitrary tensor
+--  z is an output tensor with the same shape as x
 -- and
 --  SoftMax(x) = [exp(x_i) / sum([exp(x_j) | x_j in x]) | x_i in x]
 let #var"tensorOpExn: z = SoftMax(x)": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let x_shape = tensorShape x in
-  let m = get x_shape 0 in
+  let m = tensorSize x in
   -- applies exponential function for each index
   let iterfun: Int -> () = lam i.
     let x_i = tensorLinearGetExn x i in
@@ -214,17 +211,16 @@ let #var"tensorOpExn: z = SoftMax(x)": Tensor[Float] -> Tensor[Float] -> () =
 
 -- [Backwards propagation on the standalone ReLU function]
 -- Applies the operation z = d/dx(l(ReLU(x))) where
---  h = ReLU(x)          - is a Mx1 vector
---  dldh = dl/(dReLU(x)) - is a Mx1 vector
---  z is a Mx1 vector
+--  h = ReLU(x)          - is an arbitrary tensor
+--  dldh = dl/(dReLU(x)) - is an tensor with the same shape as h
+--  z is an output tensor with the same shape as h
 -- which is calculated as
 --  z = (dldh^T * dhds)^T where dhds_ii = 1 if h_i > 0 else 0, dhds_ij = 0 if i != j
 -- then simplified as
 --  z_i = dldh_i * dhds_ii
 let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam h. lam dldh. lam z.
-  let h_shape = tensorShape h in
-  let m = get h_shape 0 in
+  let m = tensorSize h in
   -- applies max(0,) for each index
   let iterfun: Int -> () = lam i.
     let dhds_ii = if gtf (tensorLinearGetExn h i) 0.0 then 1.0 else 0.0 in
@@ -237,17 +233,16 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Tensor[Float] -> Tensor[Float] -> Te
 
 -- [Backwards propagation on the standalone SoftMax function]
 -- Applies the operation z = d/dx(l(SoftMax(x))) where
---  p = SoftMax(x)           - is a Mx1 vector
---  dldp = dl/(dSoftMax(x))  - is a Mx1 vector
---  z is a Mx1 vector
+--  p = SoftMax(x)           - is an arbitrary tensor
+--  dldp = dl/(dSoftMax(x))  - is an tensor with the same shape as p
+--  z is an output tensor with the same shape as p
 -- which is calculated as
 --  z = (dldp^T * S)^T where S is a MxM matrix and s_ii = p_i - p_i*p_i and s_ij = -p_i*p_j
 -- such that
 --  z_i = dldp · s_*,i
 let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam p. lam dldp. lam z.
-  let p_shape = tensorShape p in
-  let m = get p_shape 0 in
+  let m = tensorSize p in
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
     let p_i = tensorLinearGetExn p i in
@@ -269,12 +264,11 @@ let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Tensor[Float] -> Tensor[Float] -
 
 
 -- Inplace vector addition where
---  x is a Mx1 vector
---  z is a Mx1 vector
+--  x is an arbitrary tensor
+--  z is an output tensor with the same shape as x
 let #var"tensorOpExn: z += x": Tensor[Float] -> Tensor[Float] -> () =
   lam x. lam z.
-  let x_shape = tensorShape x in
-  let m = get x_shape 0 in
+  let m = tensorSize x in
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
     tensorLinearSetExn z i (
@@ -287,60 +281,53 @@ let #var"tensorOpExn: z += x": Tensor[Float] -> Tensor[Float] -> () =
 
 
 -- Inplace scalar multiplication where
---  x is a MxN matrix/vector
 --  c is a scalar
+--  z is an arbitrary tensor
 let #var"tensorOpExn: z *= scalar(c)": Float -> Tensor[Float] -> () =
   lam c. lam z.
-  let z_shape = tensorShape z in
-  let m = get z_shape 0 in
-  let n = get z_shape 1 in
+  let m = tensorSize z in
   let iterfun: Int -> () = lam i.
     tensorLinearSetExn z i (
       mulf (tensorLinearGetExn z i) c
     )
   in
-  parallelLoop (muli m n) iterfun
+  parallelLoop m iterfun
 
 
 -- Scalar assignment where
---  x is a MxN matrix/vector
 --  c is a scalar
+--  z is an arbitrary tensor
 let #var"tensorOpExn: z = scalar(c)": Float -> Tensor[Float] -> () =
   lam c. lam z.
-  let z_shape = tensorShape z in
-  let m = get z_shape 0 in
-  let n = get z_shape 1 in
+  let m = tensorSize z in
   let iterfun: Int -> () = lam i.
     tensorLinearSetExn z i c
   in
-  parallelLoop (muli m n) iterfun
+  parallelLoop m iterfun
 
 
 -- Inplace addition of a tensor multiplied by a scalar where
---  x is a MxN matrix/vector
+--  x is an arbitrary tensor
 --  c is a scalar
---  z is a MxN output matrix/vector
+--  z is an arbitrary output tensor with the same shape as x
 let #var"tensorOpExn: z += x * scalar(c)": Tensor[Float] -> Float -> Tensor[Float] -> () =
   lam x. lam c. lam z.
-  let x_shape = tensorShape x in
-  let m = get x_shape 0 in
-  let n = get x_shape 1 in
+  let m = tensorSize x in
   let iterfun: Int -> () = lam i.
     tensorLinearSetExn z i (
       addf (tensorLinearGetExn z i)
            (mulf (tensorLinearGetExn x i) c)
     )
   in
-  parallelLoop (muli m n) iterfun
+  parallelLoop m iterfun
 
 -- Inplace 1-hot operation on a vector
 --  y is an index (integer)
 --  c is a scalar
---  z is a Mx1 output vector
+--  z is an arbitrary tensor, s.t. y < (tensorSize z)
 let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Float -> Tensor[Float] -> () =
   lam y. lam c. lam z.
-  let z_shape = tensorShape z in
-  let m = get z_shape 0 in
+  let m = tensorSize z in
   -- NOTE(johnwikman, 2022-03-30):
   -- This is a parallel loop to ensure that the tensor operations all occur on
   -- equivalent backends.

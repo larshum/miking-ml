@@ -201,15 +201,15 @@ let nnFullyConnected: Int -> Int -> NeuralNetworkComponent = lam indim. lam outd
   let mu = 0.0 in
   let sigma = 0.001 in
   let w = tensorCreateCArrayFloat [outdim,indim] (lam. gaussianSample mu sigma) in
-  let b = tensorCreateCArrayFloat [outdim,1] (lam. gaussianSample mu sigma) in
-  nnComponentMakeExn [indim,1] [outdim,1] [w,b] "FullyConnected"
+  let b = tensorCreateCArrayFloat [outdim] (lam. gaussianSample mu sigma) in
+  nnComponentMakeExn [indim] [outdim] [w,b] "FullyConnected"
 
 -- Initializes a ReLU component with the specified dimension
 let nnReLU: Int -> NeuralNetworkComponent = lam dim.
   use NNStandardComponents in
-  nnComponentMakeExn [dim,1] [dim,1] [] "ReLU"
+  nnComponentMakeExn [dim] [dim] [] "ReLU"
 
 -- Initializes a SoftMax component with the specified dimension
 let nnSoftMax: Int -> NeuralNetworkComponent = lam dim.
   use NNStandardComponents in
-  nnComponentMakeExn [dim,1] [dim,1] [] "SoftMax"
+  nnComponentMakeExn [dim] [dim] [] "SoftMax"
