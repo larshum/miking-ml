@@ -63,6 +63,12 @@ let nnTrainSGD =
   );
   recursive let batchMakerH = lam dataset: [DataPoint]. lam acc: [DataBatch]. lam i: Int.
     let datalen = length dataset in
+    (
+      if params.printStatus then
+        print (join ["\r(", int2string (addi i 1), "/", int2string datalen, ")"]);
+        flushStdout ()
+      else ()
+    );
     if geqi i datalen then
       acc
     else
@@ -92,19 +98,25 @@ let nnTrainSGD =
                   (addi i params.batchsize)
   in
   let training_batches = batchMakerH training_data [] 0 in
+  (if params.printStatus then printLn "" else ());
   let validation_batches = batchMakerH validation_data [] 0 in
+  (if params.printStatus then printLn "" else ());
+  let wrappedPrint: String -> () = lam s.
+    print s
+    --; flushStdout ()
+  in
   accelerate -- -/
   (
     (
       if params.evaluateBeforeFirstEpoch then
         (
           if params.printStatus then
-            print "evalating performance...\n"
+            wrappedPrint "evalating performance...\n"
           else ()
         );
         let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
         if params.printStatus then
-          print "Computed accuracy: "; printFloat (mulf accuracy 100.0); print "%\n"
+          wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
         else ()
       else ()
     );
@@ -114,30 +126,30 @@ let nnTrainSGD =
       let lambda: Float = acc.1 in
       (
         if params.printStatus then
-          print "[Iteration "; printFloat (int2float epoch); print "/"; printFloat (int2float params.epochs); print "]\n";
-          print "[alpha = "; printFloat alpha; print "]\n";
-          print "[lambda = "; printFloat lambda; print "]\n"
+          wrappedPrint "[Iteration "; printFloat (int2float epoch); wrappedPrint "/"; printFloat (int2float params.epochs); print "]\n";
+          wrappedPrint "[alpha = "; printFloat alpha; wrappedPrint "]\n";
+          wrappedPrint "[lambda = "; printFloat lambda; wrappedPrint "]\n"
         else ()
       );
       seqLoop (length training_batches) (lam batch_idx.
         ( -- print round count (on a single line)
           if params.printStatus then (
-            print "\rround "; printFloat (int2float (addi batch_idx 1)); print "/"; printFloat (int2float rounds)
+            wrappedPrint "\rround "; printFloat (int2float (addi batch_idx 1)); wrappedPrint "/"; printFloat (int2float rounds)
           ) else ()
         );
         nnGradientDescentExn network alpha lambda (get training_batches batch_idx)
       );
-      print "\n";
+      wrappedPrint "\n";
       (
         if params.evaluateBetweenEpochs then
           (
             if params.printStatus then
-              print "evalating performance...\n"
+              wrappedPrint "evalating performance...\n"
             else ()
           );
           let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
           if params.printStatus then
-            print "Computed accuracy: "; printFloat (mulf accuracy 100.0); print "%\n"
+            wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
           else ()
         else ()
       );

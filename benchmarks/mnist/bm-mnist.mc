@@ -8,14 +8,14 @@ include "../../src/nn-noadt/training.mc"
 
 include "../../src/dataset/mnist.mc"
 
-let mnist_network: () -> NeuralNetwork = lam.
+let mnist_network: Int -> NeuralNetwork = lam batchsize.
   nnMake [
-           nnFullyConnected 784 128,
-           nnReLU 128,
-           nnFullyConnected 128 10,
-           nnSoftMax 10
+           nnFullyConnected batchsize 784 128,
+           nnReLU batchsize 128,
+           nnFullyConnected batchsize 128 10,
+           nnSoftMax batchsize 10
          ]
-         (nnCrossEntropyLoss 10)
+         (nnCrossEntropyLoss batchsize 10)
 
 
 let mnist_runBenchmark = lam training_data. lam validation_data.
@@ -29,7 +29,7 @@ let mnist_runBenchmark = lam training_data. lam validation_data.
     with evaluateBeforeFirstEpoch = true}
   in
   printLn "creating network...";
-  let network = mnist_network () in
+  let network = mnist_network params.batchsize in
   printLn "running mnist benchmark";
   let t_start_ms = wallTimeMs () in
   nnTrainSGD params network training_data validation_data;
