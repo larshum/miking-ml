@@ -74,18 +74,18 @@ let nnTrainSGD =
     else
       let start_idx = i in
       let end_idx = addi start_idx params.batchsize in
-      let end_idx = if geqi end_idx datalen then (subi datalen 1) else end_idx in
-      let bsize = addi (subi end_idx start_idx) 1 in
+      let end_idx = if geqi end_idx datalen then datalen else end_idx in
+      let bsize = subi end_idx start_idx in
       let _fst_dp: DataPoint = get dataset 0 in
       let datashape = tensorShape _fst_dp.input in
       let db_inputs = tensorCreateCArrayFloat (cons bsize datashape) (lam idx.
-        let b_idx = get idx 0 in
+        let b_idx = addi start_idx (get idx 0) in
         let d_idx = tail idx in
         let dp: DataPoint = get dataset b_idx in
         tensorGetExn dp.input d_idx
       ) in
       let db_outidxs = tensorCreateCArrayInt [bsize] (lam idx.
-        let b_idx = get idx 0 in
+        let b_idx = addi start_idx (get idx 0) in
         let dp: DataPoint = get dataset b_idx in
         dp.correct_linear_outidx
       ) in

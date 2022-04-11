@@ -50,4 +50,4 @@ let datasetLoadGenericIntclassInt2Float: Bool -> (Int -> Float) -> [Int] -> ([In
   ) ([], [], "") contents in
   -- return the accumulated datapoints
   (if print_status then print "\n"; flushStdout () else ());
-  result.0
+  map (lam x.x) result.0
