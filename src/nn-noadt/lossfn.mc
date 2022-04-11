@@ -11,23 +11,26 @@ let nnLossfnType_SoftMaxCrossEntropyLoss: Int = 1
 
 type NeuralNetworkLossFunction = {
   ty: Int,
-  in_grad: Tensor[Float],
-  softmax_buf: Tensor[Float]
+  in_grads: Tensor[Float],
+  out_bufs: Tensor[Float],
+  softmax_bufs: Tensor[Float]
 }
 
-let nnLossFunctionMakeExn: [Int] -> String -> NeuralNetworkLossFunction =
-  lam indim: [Int]. lam name: String.
+let nnLossFunctionMakeExn: [Int] -> Int -> String -> NeuralNetworkLossFunction =
+  lam indim: [Int]. lam max_batchsize: Int. lam name: String.
   if eqString name "CrossEntropyLoss" then
     {
       ty = nnLossfnType_CrossEntropyLoss,
-      in_grad = tensorCreateCArrayFloat indim (lam. 0.0),
-      softmax_buf = tensorCreateCArrayFloat [1] (lam. 0.0) -- dummy
+      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0),
+      out_bufs = tensorCreateCArrayFloat [max_batchsize] (lam. 0.0),
+      softmax_bufs = tensorCreateCArrayFloat [1] (lam. 0.0) -- dummy
     }
   else if eqString name "SoftMaxCrossEntropyLoss" then
     {
       ty = nnLossfnType_SoftMaxCrossEntropyLoss,
-      in_grad = tensorCreateCArrayFloat indim (lam. 0.0),
-      softmax_buf = tensorCreateCArrayFloat indim (lam. 0.0)
+      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0),
+      out_bufs = tensorCreateCArrayFloat [max_batchsize] (lam. 0.0),
+      softmax_bufs = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0)
     }
   else
     error (join ["Invalid loss function name \"", name, "\""])
@@ -42,16 +45,23 @@ let nnLossFunctionName: NeuralNetworkLossFunction -> String = lam lossfn.
   else
     join ["InvalidLossFunction(", int2string lossfn.ty, ")"]
 
-let nnLossFunctionInGrad: NeuralNetworkLossFunction -> Tensor[Float] = lam lossfn.
-  lossfn.in_grad
+let nnLossFunctionInGrads: NeuralNetworkLossFunction -> Tensor[Float] = lam lossfn.
+  lossfn.in_grads
 
-let nnLossFunctionApplyExn: Tensor[Float] -> Int -> NeuralNetworkLossFunction -> Float =
-  lam input: Tensor[Float]. lam expected: Int. lam lossfn: NeuralNetworkLossFunction.
+let nnLossFunctionOutBufs: NeuralNetworkLossFunction -> Tensor[Float] = lam lossfn.
+  lossfn.out_bufs
+
+let nnLossFunctionApplyExn: Tensor[Float] -> Tensor[Int] -> NeuralNetworkLossFunction -> () =
+  lam inputs: Tensor[Float]. lam expecteds: Tensor[Int]. lam lossfn: NeuralNetworkLossFunction.
   let ty: Int = lossfn.ty in
   if eqi ty nnLossfnType_CrossEntropyLoss then (
-    negf (log (tensorLinearGetExn input expected))
+    OLD: --negf (log (tensorLinearGetExn input expected))
+    TODO!
+    #var"tensorOpExn: z = -log(x * 1-Hot(y))" inputs expecteds lossfn.out_bufs
   ) else if eqi ty nnLossfnType_SoftMaxCrossEntropyLoss then (
-    #var"tensorOpExn: z = SoftMax(x)" input lossfn.softmax_buf;
+    -- Setting in-grads here as we will re-use this in the backpropagation later
+    #var"tensorOpExn: z = SoftMax(x)" inputs lossfn.in_grads;
+    #var"tensorOpExn: z = -log(x * 1-Hot(y))" lossfn.in_grads expecteds lossfn.out_bufs
     negf (log (tensorLinearGetExn lossfn.softmax_buf expected))
   ) else (
     0.0 --error (join ["nnLossFunctionApplyExn not handled for ", nnLossFunctionName lossfn])
@@ -99,11 +109,11 @@ end
 
 
 -- Initializes a CrossEntropyLoss function with the specified dimension
-let nnCrossEntropyLoss: Int -> NeuralNetworkLossFunction = lam dim.
+let nnCrossEntropyLoss: Int -> Int -> NeuralNetworkLossFunction = lam max_batchsize. lam dim.
   use NNStandardLossFunctions in
-  nnLossFunctionMakeExn [dim] "CrossEntropyLoss"
+  nnLossFunctionMakeExn [dim] max_batchsize "CrossEntropyLoss"
 
 -- Initializes a SoftMaxCrossEntropyLoss function with the specified dimension
-let nnSoftMaxCrossEntropyLoss: Int -> NeuralNetworkLossFunction = lam dim.
+let nnSoftMaxCrossEntropyLoss: Int -> Int -> NeuralNetworkLossFunction = lam max_batchsize. lam dim.
   use NNStandardLossFunctions in
-  nnLossFunctionMakeExn [dim] "SoftMaxCrossEntropyLoss"
+  nnLossFunctionMakeExn [dim] max_batchsize "SoftMaxCrossEntropyLoss"

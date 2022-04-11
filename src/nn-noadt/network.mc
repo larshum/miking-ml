@@ -24,6 +24,19 @@ type DataPoint = {
   correct_linear_outidx: Int
 }
 
+-- A batch is a collection of datapoints, all in a single tensor.
+-- I.e. the "inputs" tensor is of shape [size] ++ (inputShape) such that
+-- accessing a single datapoint can be done by tensor
+type DataBatch = {
+  -- Inputs where a value at [33,78] in datapoint 2 can be accessed as
+  -- tensorGetExn [2,33,78]
+  inputs: Tensor[Float],
+  -- A rank 1 tensor containing the expected output indices for each datapoint.
+  correct_linear_outidxs: Tensor[Int]
+}
+
+
+
 -- Validates a neural network. Returns `None ()` if the network is well-formed.
 -- Otherwise it returns a list of errors wrapped in an Option.
 let nnValidate: NeuralNetwork -> Option [String] =
