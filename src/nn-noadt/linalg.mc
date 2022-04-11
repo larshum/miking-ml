@@ -482,9 +482,9 @@ let #var"tensorOpExn: Dim1Reduce(z, dst = z_0, op = +)": Tensor[Float] -> () =
   let s = get (tensorShape z) 0 in
   let m = divi (tensorSize z) s in
   -- Only reduce if S > 1, we assume that it is below...
-  if leqi s 1 then
-    ()
-  else
+--  if leqi s 1 then
+--    ()
+--  else
     -- Iterate over the sub idx's, sequentially add up the S-dimension
     let iterfun: Int -> () = lam i.
       let v = seqLoopAcc (tensorLinearGetExn z i) (subi s 1) (lam acc: Float. lam j: Int.
