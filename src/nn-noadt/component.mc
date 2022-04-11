@@ -23,7 +23,8 @@ type NeuralNetworkComponent = {
   w_grads: Tensor[Float],
   b_grads: Tensor[Float],
   out_bufs: Tensor[Float],
-  in_grads: Tensor[Float]
+  in_grads: Tensor[Float],
+  softmax_bufs: Tensor[Float]
 }
 
 let nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> Int -> String -> NeuralNetworkComponent =
@@ -42,7 +43,8 @@ let nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> Int -> String -> Ne
       out_bufs = tensorCreateCArrayFloat (cons max_batchsize outdim) (lam. 0.0),
       w_grads = tensorCreateCArrayFloat (cons max_batchsize (tensorShape w)) (lam. 0.0),
       b_grads = tensorCreateCArrayFloat (cons max_batchsize (tensorShape b)) (lam. 0.0),
-      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0)
+      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0),
+      softmax_bufs = tensorCreateCArrayFloat [1] (lam. 0.0) -- dummy
     }
   else if eqString name "ReLU" then
     {
@@ -52,7 +54,8 @@ let nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> Int -> String -> Ne
       out_bufs = tensorCreateCArrayFloat (cons max_batchsize outdim) (lam. 0.0),
       w_grads = tensorCreateCArrayFloat [1] (lam. 0.0), -- dummy
       b_grads = tensorCreateCArrayFloat [1] (lam. 0.0), -- dummy
-      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0)
+      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0),
+      softmax_bufs = tensorCreateCArrayFloat [1] (lam. 0.0) -- dummy
     }
   else if eqString name "SoftMax" then
     {
@@ -62,7 +65,8 @@ let nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> Int -> String -> Ne
       out_bufs = tensorCreateCArrayFloat (cons max_batchsize outdim) (lam. 0.0),
       w_grads = tensorCreateCArrayFloat [1] (lam. 0.0), -- dummy
       b_grads = tensorCreateCArrayFloat [1] (lam. 0.0), -- dummy
-      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0)
+      in_grads = tensorCreateCArrayFloat (cons max_batchsize indim) (lam. 0.0),
+      softmax_bufs = tensorCreateCArrayFloat [max_batchsize] (lam. 0.0)
     }
   else
     error (join ["Invalid component name \"", name, "\""])
@@ -102,10 +106,9 @@ let nnComponentGradients: NeuralNetworkComponent -> [Tensor[Float]] = lam comp.
 -- Inputs is a tensor where the first index specifies the data point. E.g. if a
 -- single input has dimension AxB, then inputs shall have dimension NxAxB where
 -- N represents the number of inputs.
-let nnComponentApplyExn: Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float] =
-  lam inputs: Tensor[Float]. lam comp: NeuralNetworkComponent.
+let nnComponentApplyExn: Int -> Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float] =
+  lam s_max: Int. lam inputs: Tensor[Float]. lam comp: NeuralNetworkComponent.
   let ty = comp.ty in
-  let s_max = get (tensorShape inputs) 0 in
   if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: z = Wx+B" s_max comp.w inputs comp.b comp.out_bufs;
     comp.out_bufs
@@ -113,7 +116,7 @@ let nnComponentApplyExn: Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float
     #var"tensorOpExn: z = ReLU(x)" s_max inputs comp.out_bufs;
     comp.out_bufs
   ) else if eqi ty nnCompType_SoftMax then (
-    #var"tensorOpExn: z = SoftMax(x)" s_max inputs comp.out_bufs;
+    #var"tensorOpExn: z = SoftMax(x)" s_max inputs comp.softmax_bufs comp.out_bufs;
     comp.out_bufs
   ) else (
     comp.out_bufs --error (join ["nnComponentApplyExn not handled for ", nnComponentName comp])
@@ -123,10 +126,9 @@ let nnComponentApplyExn: Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float
 -- on the index in the first dimension. Same thing goes for output_grads. Both
 -- comp_inputs and output_grads must share the first dimensionality, i.e. both
 -- must be Sx[_]-dimensional.
-let nnComponentBackpropExn: Tensor[Float] -> Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float] =
-  lam comp_inputs: Tensor[Float]. lam output_grads: Tensor[Float]. lam comp: NeuralNetworkComponent.
+let nnComponentBackpropExn: Int -> Tensor[Float] -> Tensor[Float] -> NeuralNetworkComponent -> Tensor[Float] =
+  lam s_max: Int. lam comp_inputs: Tensor[Float]. lam output_grads: Tensor[Float]. lam comp: NeuralNetworkComponent.
   let ty = comp.ty in
-  let s_max = get (tensorShape comp_inputs) 0 in
   if eqi ty nnCompType_FullyConnected then (
     -- Backpropagate on the Bias
     #var"tensorOpExn: z += x" s_max output_grads comp.b_grads;
@@ -155,7 +157,8 @@ let nnComponent_TEMP_SetGradients: Float -> NeuralNetworkComponent -> () =
     #var"tensorOpExn: Z = scalar(c)" scalar comp.b_grads
   ) else ()
 
-let nnComponent_TEMP_ReduceGradients: Float -> NeuralNetworkComponent -> () =
+let nnComponent_TEMP_ReduceGradients: NeuralNetworkComponent -> () =
+  lam comp: NeuralNetworkComponent.
   let ty = comp.ty in
   if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: Dim1Reduce(z, dst = z_0, op = +)" comp.w_grads;
@@ -172,6 +175,8 @@ let nnComponent_TEMP_ScaleGradients: Float -> NeuralNetworkComponent -> () =
 
 let nnComponent_TEMP_ApplyGradients: Float -> NeuralNetworkComponent -> () =
   lam scalar: Float. lam comp: NeuralNetworkComponent.
+  -- First reduce the gradients to the zero index
+  nnComponent_TEMP_ReduceGradients comp;
   let ty = comp.ty in
   if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: Z += x * scalar(c)" 0 comp.w_grads scalar comp.w;

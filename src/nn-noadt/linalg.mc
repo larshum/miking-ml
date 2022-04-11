@@ -29,24 +29,26 @@ let seqLoopFoldl: Float -> Int -> (Float -> Int -> Float) -> Float =
   in work initacc 0
 -- -/
 
--- Applies the operation z = Wx + b where
---  s_max is the limit on maximum index iterated over in the S-dimension
+-- Applies the operation z = Wx + B where
+--  s_max is the iteration limit in the S-dimension
 --  W is a MxN-dim matrix
 --  x is a SxN-dim tensor (S no. of N-dim input vectors)
 --  B is a M-dim vector
---  z is a SxM-dim output tensor (S no. of N-dim output vectors)
+--  z is a SxM-dim output tensor
 let #var"tensorOpExn: z = Wx+B": Int -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam w. lam x. lam b. lam z.
   let w_shape = tensorShape w in
   let m = get w_shape 0 in
   let n = get w_shape 1 in
-  -- iterating function over the all indices in z (up to s_max)
+
+  -- iterating function over indices in z (up to s_max)
   let iterfun: Int -> () = lam i.
-    -- offset in the S-dimension
-    let offset = divi i m in
-    let x_offset = muli offset n in
+    let s_idx = divi i m in
+
+    let x_offset = muli s_idx n in
     let z_idx = i in
-    -- convert index i to iterate over M in the S-dimension
+
+    -- convert index i to iterate over M-dimension
     let i = modi i m in
     -- dot product over the N-dimension
     -- The row below beforms the following operation: v = W_i,* · x^T + b_i
@@ -85,7 +87,7 @@ let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Flo
 -/
 
 -- Applies the operation z += x * y^T where
---  s_max is the limit on maximum index iterated over in the S-dimension
+--  s_max is the iteration limit in the S-dimension
 --  x is a SxM-dim tensor (S no. of M-dim vectors)
 --  y is a SxN-dim tensor (S no. of N-dim vectors)
 --  z is a SxMxN tensor (S no. of MxN matrices)
@@ -96,15 +98,18 @@ let #var"tensorOpExn: z += x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Te
   let m = get z_shape 1 in
   let n = get z_shape 2 in
   let m_x_n = muli m n in
+
   -- iterating function over all MxN rows and columns (limited by s_max)
   let iterfun: Int -> () = lam i.
-    let s_offset = divi i m_x_n in
+    let s_idx = divi i m_x_n in
+
     let z_idx = i in
+    -- Convert i to be linear in the MxN dimension
     let i = modi i m_x_n in
     let row = divi i n in
     let col = modi i n in
-    let x_idx = addi (muli row m) in
-    let y_idx = addi (muli col n) in
+    let x_idx = addi row (muli s_idx m) in
+    let y_idx = addi col (muli s_idx n) in
     -- z_jk += x_j * y_k
     tensorLinearSetExn z z_idx (
       addf (tensorLinearGetExn z z_idx)
@@ -117,7 +122,7 @@ let #var"tensorOpExn: z += x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Te
 
 
 -- Applies the operation z = (x^T * W)^T where
---  s_max is the limit on maximum index iterated over in the S-dimension
+--  s_max is the iteration limit in the S-dimension
 --  x is a SxM-dim tensor (S no. of M-dim vectors)
 --  W is a MxN matrix
 --  z is a SxN-dim output tensor (S no. of M-dim vectors)
@@ -126,12 +131,16 @@ let #var"tensorOpExn: z = (x^T * W)^T": Int -> Tensor[Float] -> Tensor[Float] ->
   let w_shape = tensorShape w in
   let m = get w_shape 0 in
   let n = get w_shape 1 in
-  -- iterating function over the N-dimension in z (limited by s_max)
+
+  -- iterating function over the N-dimension in z
   let iterfun: Int -> () = lam j.
-    let s_offset = divi j n in
+    let s_idx = divi j n in
+    let n_idx = modi j n in
+
     let z_idx = j in
-    let x_offset = muli s_offset m in
-    let j = modi j n in
+    let x_offset = muli s_idx m in
+    -- convert j to represent the N-dimension for this S-index
+    let j = n_idx in
     -- dot product over x and the j'th column in W
     -- The row below beforms the following operation: v = x · W_*,j
     let v = seqLoopAcc 0.0 m (lam acc: Float. lam i: Int.
@@ -169,15 +178,16 @@ let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tenso
 
 
 -- Applies the operation z = ReLU(x) where
---  s_max is the limit on maximum index iterated over in the S-dimension
---  x is an Sx[_] tensor
---  z is an output tensor with the same shape as x
+--  s_max is the iteration limit in the S-dimension
+--  x is an Sx[_]-dim tensor
+--  z is a Sx[_]-dim output tensor with the same shape as x
 -- and
 --  ReLU(x) = [max(0,x_i) | x_i in x]
 let #var"tensorOpExn: z = ReLU(x)": Int -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam x. lam z.
   let s = get (tensorShape x) 0 in
   let m = divi (tensorSize x) s in
+
   -- applies ReLU for each index
   let iterfun: Int -> () = lam i.
     let x_i: Float = tensorLinearGetExn x i in
@@ -186,6 +196,8 @@ let #var"tensorOpExn: z = ReLU(x)": Int -> Tensor[Float] -> Tensor[Float] -> () 
   -- apply the iterfun
   parallelLoop (muli s_max m) iterfun
 
+
+/-
 -- Applies the operation z = dReLU(x) where
 --  x is an arbitrary tensor
 --  z is an output tensor with the same shape as x
@@ -201,16 +213,16 @@ let #var"tensorOpExn: z = dReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
   in
   -- apply the iterfun
   parallelLoop m iterfun
-
+-/
 
 -- todo: implement "tensorOpExn: z = ReLU(Wx + b)" for efficiency
 
 
 -- Applies the operation z = SoftMax(x) where
---  s_max is the limit on maximum index iterated over in the S-dimension
+--  s_max is the iteration limit in the S-dimension
 --  x is a Sx[_] input tensor
---  expsumbuf is a S-dimensional tensor used for buffering the sums
---  z is an output tensor with the same shape as x
+--  expsumbuf is a S-dim tensor used for buffering the sums
+--  z is a Sx[_]-dim output tensor with the same shape as x
 -- and
 --  SoftMax(x) = [exp(x_i) / sum([exp(x_j) | x_j in x]) | x_i in x]
 let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
@@ -249,10 +261,12 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
 
 -- [Backwards propagation on the standalone ReLU function]
 -- Applies the operation z = d/dx(l(ReLU(x))) where
---  s_max is the limit on maximum index iterated over in the S-dimension
+--  s_max is the iteration limit in the S-dimension
 --  h = ReLU(x)          - is an Sx[_] tensor
 --  dldh = dl/(dReLU(x)) - is an tensor with the same shape as h
---  z is an output tensor with the same shape as h
+--  s_start is the start index in the S-dimension
+--  s_end is the stop index in the S-dimension
+--  z is an output tensor with same shape as h
 -- which is calculated as
 --  z = (dldh^T * dhds)^T where dhds_ii = 1 if h_i > 0 else 0, dhds_ij = 0 if i != j
 -- then simplified as
@@ -273,10 +287,10 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Int -> Tensor[Float] -> Tensor[Float
 
 -- [Backwards propagation on the standalone SoftMax function]
 -- Applies the operation z = d/dx(l(SoftMax(x))) where
---  s_max is the limit on maximum index iterated over in the S-dimension
+--  s_max is the iteration limit in the S-dimension
 --  p = SoftMax(x)           - is an Sx[_] tensor
---  dldp = dl/(dSoftMax(x))  - is an tensor with the same shape as p
---  z is an output tensor with the same shape as p
+--  dldp = dl/(dSoftMax(x))  - is a tensor with the same shape as p
+--  z is a Sx[_] output tensor with the same shape as p
 -- which is calculated as
 --  z = (dldp^T * S)^T where S is a MxM matrix and s_ii = p_i - p_i*p_i and s_ij = -p_i*p_j
 -- such that
@@ -285,37 +299,41 @@ let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Int -> Tensor[Float] -> Tensor[F
   lam s_max. lam p. lam dldp. lam z.
   let s = get (tensorShape p) 0 in
   let m = divi (tensorSize p) s in
-  -- applies the iteration on each index in the M-dimension (limited by s_max)
+
+  -- applies the iteration on each index in the M-dimension (limited by s_bound)
   let iterfun: Int -> () = lam i.
-    let s_offset = divi i m in
-    let offset = muli s_offset m in
+    let s_idx = divi i m in
+    let s_offset = muli s_idx m in
+
+    -- i is now index in the M-dimension (S-dim stripped)
     let i = modi i m in
-    let p_i = tensorLinearGetExn p (addi offset i) in
+    let p_i = tensorLinearGetExn p (addi s_offset i) in
     let v = seqLoopAcc 0.0 m (lam acc: Float. lam j: Int.
       let s_ij = 
         if eqi j i then
           subf p_i (mulf p_i p_i)
         else
-          let p_j = tensorLinearGetExn p (addi offset j) in
+          let p_j = tensorLinearGetExn p (addi s_offset j) in
           negf (mulf p_i p_j)
       in
-      let dldp_j = tensorLinearGetExn dldp (addi offset j) in
+      let dldp_j = tensorLinearGetExn dldp (addi s_offset j) in
       addf acc (mulf dldp_j s_ij)
     ) in
-    tensorLinearSetExn z (addi offset i) v
+    tensorLinearSetExn z (addi s_offset i) v
   in
   -- apply the iterfun
   parallelLoop (muli s_max m) iterfun
 
 
 -- Inplace vector addition where
---  s_max is the limit on maximum index iterated over in the S-dimension
+--  s_max is the iteration limit in the S-dimension
 --  x is a Sx[_] input tensor
---  z is an output tensor with the same shape as x
+--  z is a Sx[_]-dim output tensor with the same shape as x
 let #var"tensorOpExn: z += x": Int -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam x. lam z.
   let s = get (tensorShape x) 0 in
   let m = divi (tensorSize x) s in
+
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
     tensorLinearSetExn z i (
@@ -373,22 +391,88 @@ let #var"tensorOpExn: Z += x * scalar(c)": Int -> Tensor[Float] -> Float -> Tens
   in
   parallelLoop m iterfun
 
--- Inplace 1-hot operation on a vector
---  y is an index (integer)
+
+-- Inplace addition of a tensor multiplied by a scalar where
+--  s_idx is the index in the S-dimension to use for x
+--  X is an arbitrary tensor
 --  c is a scalar
---  z is an arbitrary tensor, s.t. y < (tensorSize z)
-let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Float -> Tensor[Float] -> () =
-  lam y. lam c. lam z.
-  let m = tensorSize z in
-  -- NOTE(johnwikman, 2022-03-30):
-  -- This is a parallel loop to ensure that the tensor operations all occur on
-  -- equivalent backends.
-  let iterfun: Int -> () = lam.
-    tensorLinearSetExn z y (
-      addf (tensorLinearGetExn z y) c
+--  z is a Sx[_] output tensor where the tail shape is the same shape as x
+--    (e.g. if x is MxN-dim, then z must be SxMxN-dim)
+let #var"tensorOpExn: z += X * scalar(c)": Int -> Tensor[Float] -> Float -> Tensor[Float] -> () =
+  lam s_idx. lam x. lam c. lam z.
+  let m = tensorSize x in
+  let z_offset = muli s_idx m in
+  let iterfun: Int -> () = lam i.
+    let z_idx = addi i z_offset in
+    tensorLinearSetExn z z_idx (
+      addf (tensorLinearGetExn z z_idx)
+           (mulf (tensorLinearGetExn x i) c)
     )
   in
-  parallelLoop 1 iterfun
+  parallelLoop m iterfun
+
+
+-- Inplace 1-hot operation on a vector over the S-dimension
+--  s_max is the iteration limit in the S-dimension
+--  y is a S-dim index tensor, values in this tensor must be in the range [0,M)
+--  c is a scalar
+--  z is a SxM-dim tensor
+let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Tensor[Int] -> Float -> Tensor[Float] -> () =
+  lam s_max. lam y. lam c. lam z.
+  let m = get (tensorShape z) 1 in
+
+  let iterfun: Int -> () = lam i.
+    let idx = tensorLinearGetExn y i in
+    let offset = muli i m in
+    let z_idx = addi idx offset in
+    tensorLinearSetExn z z_idx (
+      addf (tensorLinearGetExn z z_idx) c
+    )
+  in
+  parallelLoop s_max iterfun
+
+
+-- Performs the operator z = -log(x^T * 1-Hot(y)) over the S-dimension
+--  s_max is the iteration limit in the S-dimension
+--  x is a SxM-dim input tensor
+--  y is a S-dim indexing tensor, values in this tensor must be in the range [0,M)
+--  z is a S-dim output tensor
+let #var"tensorOpExn: z = -log(x^T * 1-Hot(y))": Int -> Tensor[Float] -> Tensor[Int] -> Tensor[Float] -> () =
+  lam s_max. lam x. lam y. lam z.
+  --let s = get (tensorShape x) 0 in
+  let m = get (tensorShape x) 1 in
+
+  let iterfun: Int -> () = lam i.
+    let x_offset: Int = muli i m in
+    let idx: Int = tensorLinearGetExn y i in
+    let v = negf (log (tensorLinearGetExn x (addi idx x_offset))) in
+    tensorLinearSetExn z i v
+  in
+  parallelLoop s_max iterfun
+
+
+-- Constructs the vector [0, ..., 0, -1/x_y, 0, ..., 0] in the S-dimension
+--  s_max is the iteration limit in the S-dimension
+--  y is a S-dim indexing tensor, values in this tensor must be in the range [0,M)
+--  x is a SxM-dim input tensor
+--  z is a SxM-dim output tensor
+let #var"tensorOpExn: z = 1-Hot(y) * scalar(-1/(x^T * 1-Hot(y)))": Int -> Tensor[Int] -> Tensor[Float] -> Tensor[Float] -> () =
+  lam s_max. lam y. lam x. lam z.
+  let s = get (tensorShape x) 0 in
+  let m = get (tensorShape x) 1 in
+
+  let iterfun: Int -> () = lam i.
+    let offset: Int = muli i m in
+    let idx: Int = tensorLinearGetExn y i in
+    let v = negf (divf 1.0 (tensorLinearGetExn x (addi idx offset))) in
+    seqLoop m (lam j.
+      if eqi j idx then
+        tensorLinearSetExn z (addi j offset) v
+      else
+        tensorLinearSetExn z (addi j offset) 0.0
+    )
+  in
+  parallelLoop s_max iterfun
 
 
 -- Reduces the tensor z over the S-dimension by addition, s.t. for each tensor

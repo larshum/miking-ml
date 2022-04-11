@@ -115,25 +115,27 @@ let nnZeroGrad: NeuralNetwork -> () = lam network: NeuralNetwork.
 --  input is the Nx1 input vector
 -- Returns the output vector.
 let nnEvalExn: NeuralNetwork -> Tensor[Float] -> Tensor[Float] =
-  lam network. lam input.
+  lam network. lam inputs.
   use NNStandard in
-  foldl (lam prevout: Tensor[Float]. lam comp: NeuralNetworkComponent.
+  let s_max = get (tensorShape inputs) 0 in
+  foldl (lam prevouts: Tensor[Float]. lam comp: NeuralNetworkComponent.
     -- Applies this component and returns the resulting output to the next
     -- iteration (the final iteration becomes the nnEvalExn output)
-    nnComponentApplyExn prevout comp
-  ) input network.components
+    nnComponentApplyExn s_max prevouts comp
+  ) inputs network.components
 
 
 -- Computes the loss on the provided data point when evaluated on the network.
 -- This does not compute any gradients.
 --  network is the neural network
 --  dp is the data point
-let nnComputeLossExn: NeuralNetwork -> DataPoint -> Float =
-  lam network. lam dp.
+let nnComputeLossesExn: NeuralNetwork -> DataBatch -> Tensor[Float] =
+  lam network. lam batch.
   use NNStandard in
-  let output = nnEvalExn network dp.input in
-  -- Return the evaluated loss
-  nnLossFunctionApplyExn output dp.correct_linear_outidx network.lossfn
+  let s_max = get (tensorShape batch.inputs) 0 in
+  let outputs = nnEvalExn network batch.inputs in
+  -- Return the evaluated losses
+  nnLossFunctionApplyExn s_max outputs batch.correct_linear_outidxs network.lossfn
 
 
 -- Computes the gradients for the components with respect to the loss function,
@@ -141,18 +143,19 @@ let nnComputeLossExn: NeuralNetwork -> DataPoint -> Float =
 -- the different inputs to sum over all the gradients, in order to perform
 -- batch normalization in a training step.
 --  network is the network to train on
---  dp is the datapoint to backpropagate on
+--  batch is the datapoint to backpropagate on
 --
 -- NOTE: If this is the first time computing gradients in this step, remember
 --       to run `nnZeroGrad <network>` to clear the previous gradients.
-let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
-  lam network: NeuralNetwork. lam dp: DataPoint.
+let nnBackpropExn: NeuralNetwork -> DataBatch -> () =
+  lam network: NeuralNetwork. lam batch: DataBatch.
   use NNStandard in
+  let s_max = get (tensorShape batch.inputs) 0 in
   -- Step 1: Evaluate the network to populate the outputs at each step,
   --         necessary for computing the gradients at each component.
-  let outputs: Tensor[Float] = nnEvalExn network dp.input in
+  let outputs: Tensor[Float] = nnEvalExn network batch.inputs in
   -- Step 2: Compute gradient with respect to the loss function
-  let lossgrad: Tensor[Float] = nnLossFunctionBackpropExn outputs dp.correct_linear_outidx network.lossfn in
+  let lossgrads: Tensor[Float] = nnLossFunctionBackpropExn s_max outputs batch.correct_linear_outidxs network.lossfn in
   -- Step 3: Propagate the gradients backwards
   -- (pair the components with the evaluated inputs to each of those components)
   let n_components: Int = length network.components in
@@ -160,52 +163,57 @@ let nnBackpropExn: NeuralNetwork -> DataPoint -> () =
   else if eqi n_components 1 then (
     -- Special case: last component is the only component (in_buf = dp.input)
     let lastcomp = get network.components 0 in
-    nnComponentBackpropExn dp.input lossgrad lastcomp;
+    nnComponentBackpropExn s_max batch.inputs lossgrads lastcomp;
     ()
   ) else (
     -- At least 2 components...
     -- Last component, special case on output gradient
     let lastcomp = get network.components (subi n_components 1) in
-    let lastcomp_in_buf: Tensor[Float] = nnComponentOutBuf (get network.components (subi n_components 2)) in
+    let lastcomp_in_bufs: Tensor[Float] = nnComponentOutBufs (get network.components (subi n_components 2)) in
     --let lastcomp_out_grad = lossgrad in
     --let lastcomp_in_grad = nnComponentBackpropExn lastcomp_in_buf lastcomp_out_grad lastcomp in
 
-    let lastcomp_in_grad: Tensor[Float] = nnComponentBackpropExn lastcomp_in_buf lossgrad lastcomp in
+    let lastcomp_in_grads: Tensor[Float] = nnComponentBackpropExn s_max lastcomp_in_bufs lossgrads lastcomp in
 
     -- Middle components, iterate backwards over all components not at the
     -- start nor at the end
-    let firstcomp_out_grad =
-      seqLoopAcc lastcomp_in_grad (subi n_components 2) (
-        lam out_grad: Tensor[Float]. lam i: Int.
+    let firstcomp_out_grads =
+      seqLoopAcc lastcomp_in_grads (subi n_components 2) (
+        lam out_grads: Tensor[Float]. lam i: Int.
         -- component idx = (|Components| - 2) - i = |Components| - (i + 2)
         let idx = subi n_components (addi i 2) in
         let previdx = subi idx 1 in
 
         let comp: NeuralNetworkComponent = get network.components idx in
-        let in_buf: Tensor[Float] = nnComponentOutBuf (get network.components previdx) in
-        nnComponentBackpropExn in_buf out_grad comp
+        let in_bufs: Tensor[Float] = nnComponentOutBufs (get network.components previdx) in
+        nnComponentBackpropExn s_max in_bufs out_grads comp
       )
     in
 
     -- First component, special case on input buffer
     let firstcomp: NeuralNetworkComponent = get network.components 0 in
-    let firstcomp_in_buf: Tensor[Float] = dp.input in
-    nnComponentBackpropExn firstcomp_in_buf firstcomp_out_grad firstcomp;
+    let firstcomp_in_bufs: Tensor[Float] = batch.inputs in
+    nnComponentBackpropExn s_max firstcomp_in_bufs firstcomp_out_grads firstcomp;
     ()
   )
 
-let nnGradientDescentIndexedExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> Int -> Int -> () =
-  lam network. lam alpha. lam lambda. lam dataset. lam start_idx. lam end_idx.
+-- Trains the network on the provided batch of data points, performing gradient
+-- descent on the batch normalized output
+--  network is the NN to train on
+--  alpha is the learning rate
+--  lambda is the regularization factor for fully connected layers, should be
+--         in the range [0,1], where a value of 0.0 represents no
+--         regularization
+--  batch is the list of data points to train on, applies mini-batch
+let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> DataBatch -> () =
+  lam network. lam alpha. lam lambda. lam batch.
   use NNStandard in
    -- zero out the gradients
   nnZeroGrad network;
   -- Batch size
-  let batchsize = subi end_idx start_idx in
+  let batchsize = get (tensorShape batch.inputs) 0 in
   -- backpropagate over the data points
-  seqLoop batchsize (lam offset: Int.
-    let idx: Int = addi start_idx offset in
-    nnBackpropExn network (get dataset idx)
-  );
+  nnBackpropExn network batch;
   -- apply the mini-batch regularization ( grad = sum(grad) / |B| )
   let batchsize_regularizer = divf 1.0 (int2float batchsize) in
   foldl (lam x: Int. lam comp: NeuralNetworkComponent.
@@ -227,15 +235,3 @@ let nnGradientDescentIndexedExn: NeuralNetwork -> Float -> Float -> [DataPoint] 
     nnComponent_TEMP_ApplyGradients (negf alpha) comp; 0
   ) 0 network.components;
   ()
-
--- Trains the network on the provided batch of data points, performing gradient
--- descent on the batch normalized output
---  network is the NN to train on
---  alpha is the learning rate
---  lambda is the regularization factor for fully connected layers, should be
---         in the range [0,1], where a value of 0.0 represents no
---         regularization
---  batch is the list of data points to train on, applies mini-batch
-let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> [DataPoint] -> () =
-  lam network. lam alpha. lam lambda. lam batch.
-  nnGradientDescentIndexedExn network alpha lambda batch 0 (length batch)

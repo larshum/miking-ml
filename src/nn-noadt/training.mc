@@ -56,6 +56,43 @@ let nnTrainSGD =
       printLn (join [" - lambda decay: ", float2string params.decay_lambda])
     else ()
   );
+  (
+    if params.printStatus then
+      printLn "Creating batches..."
+    else ()
+  );
+  recursive let batchMakerH = lam dataset: [DataPoint]. lam acc: [DataBatch]. lam i: Int.
+    let datalen = length dataset in
+    if geqi i datalen then
+      acc
+    else
+      let start_idx = i in
+      let end_idx = addi start_idx params.batchsize in
+      let end_idx = if geqi end_idx datalen then (subi datalen 1) else end_idx in
+      let bsize = addi (subi end_idx start_idx) 1 in
+      let _fst_dp: DataPoint = get dataset 0 in
+      let datashape = tensorShape _fst_dp.input in
+      let db_inputs = tensorCreateCArrayFloat (cons bsize datashape) (lam idx.
+        let b_idx = get idx 0 in
+        let d_idx = tail idx in
+        let dp: DataPoint = get dataset b_idx in
+        tensorGetExn dp.input d_idx
+      ) in
+      let db_outidxs = tensorCreateCArrayInt [bsize] (lam idx.
+        let b_idx = get idx 0 in
+        let dp: DataPoint = get dataset b_idx in
+        dp.correct_linear_outidx
+      ) in
+      let db: DataBatch = {
+        inputs = db_inputs,
+        correct_linear_outidxs = db_outidxs
+      } in
+      batchMakerH dataset
+                  (snoc acc db)
+                  (addi i params.batchsize)
+  in
+  let training_batches = batchMakerH training_data [] 0 in
+  let validation_batches = batchMakerH validation_data [] 0 in
   accelerate -- -/
   (
     (
@@ -65,7 +102,7 @@ let nnTrainSGD =
             print "evalating performance...\n"
           else ()
         );
-        let accuracy = nnAccuracyProportion params.printStatus network validation_data in
+        let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
         if params.printStatus then
           print "Computed accuracy: "; printFloat (mulf accuracy 100.0); print "%\n"
         else ()
@@ -82,16 +119,13 @@ let nnTrainSGD =
           print "[lambda = "; printFloat lambda; print "]\n"
         else ()
       );
-      seqLoop rounds (lam rnd.
+      seqLoop (length training_batches) (lam batch_idx.
         ( -- print round count (on a single line)
           if params.printStatus then (
-            print "\rround "; printFloat (int2float (addi rnd 1)); print "/"; printFloat (int2float rounds)
+            print "\rround "; printFloat (int2float (addi batch_idx 1)); print "/"; printFloat (int2float rounds)
           ) else ()
         );
-        let start_idx = muli rnd params.batchsize in
-        let end_idx = addi start_idx params.batchsize in
-        let end_idx = if gti end_idx (length training_data) then (length training_data) else end_idx in
-        nnGradientDescentIndexedExn network alpha lambda training_data start_idx end_idx
+        nnGradientDescentExn network alpha lambda (get training_batches batch_idx)
       );
       print "\n";
       (
@@ -101,7 +135,7 @@ let nnTrainSGD =
               print "evalating performance...\n"
             else ()
           );
-          let accuracy = nnAccuracyProportion params.printStatus network validation_data in
+          let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
           if params.printStatus then
             print "Computed accuracy: "; printFloat (mulf accuracy 100.0); print "%\n"
           else ()

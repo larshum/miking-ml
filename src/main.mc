@@ -6,6 +6,7 @@ include "dataset/mnist.mc"
 include "nn-noadt/training.mc"
 include "nn-noadt/network.mc"
 include "./test/numvalid.mc"
+include "./test/comptest.mc"
 
 let main = lam.
   let argc = length argv in
@@ -20,12 +21,13 @@ let main = lam.
     else (
       let training_file = get argv 2 in
       let validation_file = get argv 3 in
+      let bsize = 32 in
       let network =
-        nnMake [nnFullyConnected 3072 128,
-                nnReLU 128,
-                nnFullyConnected 128 10,
-                nnSoftMax 10]
-               (nnCrossEntropyLoss 10)
+        nnMake [nnFullyConnected bsize 3072 128,
+                nnReLU bsize 128,
+                nnFullyConnected bsize 128 10,
+                nnSoftMax bsize 10]
+               (nnCrossEntropyLoss bsize 10)
       in
       let sgdparams =
         {nnVanillaSGDParameters
@@ -45,11 +47,12 @@ let main = lam.
     else (
       let training_file = get argv 2 in
       let validation_file = get argv 3 in
+      let bsize = 32 in
       let network: NeuralNetwork =
-        nnMake [nnFullyConnected 784 128,
-                nnReLU 128,
-                nnFullyConnected 128 10]
-               (nnSoftMaxCrossEntropyLoss 10)
+        nnMake [nnFullyConnected bsize 784 128,
+                nnReLU bsize 128,
+                nnFullyConnected bsize 128 10]
+               (nnSoftMaxCrossEntropyLoss bsize 10)
       in
       let sgdparams =
         {{{nnVanillaSGDParameters
@@ -71,6 +74,12 @@ let main = lam.
     else
       printLn "running numerical validation suite";
       nntestNumericalValidation ()
+  else if eqString mode "comptest" then
+    if neqi argc 2 then
+      printLn (join ["usage: ", prog, " numvalid"])
+    else
+      printLn "running component testing suite";
+      nntestAllComponents ()
   else
     printLn (join ["unknown mode \"", mode, "\""])
 

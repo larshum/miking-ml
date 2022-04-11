@@ -20,9 +20,15 @@ let nntestNumericalValidationGeneric =
   use NNStandard in
   let dPrintLn = lam s. if printDetails then printLn s else () in
   let dPrint = lam s. if printDetails then print s else () in
+  let batch: DataBatch = {
+    inputs = tensorCreateCArrayFloat (cons 1 (tensorShape dp.input)) (lam idx.
+      tensorGetExn dp.input (tail idx)
+    ),
+    correct_linear_outidxs = tensorCreateCArrayInt [1] (lam. dp.correct_linear_outidx)
+  } in
   dPrintLn "computing analytical gradients...";
-  nnBackpropExn network dp;
-  let baseline_loss = nnComputeLossExn network dp in
+  nnBackpropExn network batch;
+  let baseline_loss = tensorGetExn (nnComputeLossesExn network batch) [0] in
   dPrintLn (join ["baseline loss: ", float2string baseline_loss]);
   let h = 1.0e-4 in
   dPrintLn (join ["computing numerical gradients using stepsize h = ", float2string h]);
@@ -41,8 +47,8 @@ let nntestNumericalValidationGeneric =
           -- perform a small step on w_idx
           let network_copy = nnCopy network in
           let weights_copy = get (nnComponentWeights (get network_copy.components componentIdx)) grad_idx in
-          tensorSetExn weights_copy idx (addf (tensorGetExn weights_copy idx) h);
-          let new_loss = nnComputeLossExn network_copy dp in
+          tensorSetExn weights_copy (tail idx) (addf (tensorGetExn weights_copy (tail idx)) h);
+          let new_loss = tensorGetExn (nnComputeLossesExn network_copy batch) [0] in
           --dPrintLn (join [" - new_loss = ", float2string new_loss]);
           let numdiff = divf (subf new_loss baseline_loss) h in
           tensorSetExn numerical_grad idx numdiff;
@@ -85,18 +91,19 @@ let nntestNumericalValidation = lam.
   printLn "│    Avg.Diff < 1e-05 is OK    │";
   printLn "└──────────────────────────────┘";
   let dp: DataPoint = {
-    input = tensorCreateCArrayFloat [4,1] (lam idx. int2float (addi (get idx 0) 1)),
-    correct_outidx = [1,0],
+    input = tensorCreateCArrayFloat [4] (lam idx. int2float (addi (get idx 0) 1)),
+    correct_outidx = [1],
     correct_linear_outidx = 1
   } in
+  let bsize = 1 in
   let network: NeuralNetwork =
-    nnMake [nnFullyConnected 4 6,
-            nnReLU 6,
-            nnFullyConnected 6 8,
-            nnReLU 8,
-            nnFullyConnected 8 10,
-            nnSoftMax 10]
-           (nnCrossEntropyLoss 10)
+    nnMake [nnFullyConnected bsize 4 6,
+            nnReLU bsize 6,
+            nnFullyConnected bsize 6 8,
+            nnReLU bsize 8,
+            nnFullyConnected bsize 8 10,
+            nnSoftMax bsize 10]
+           (nnCrossEntropyLoss bsize 10)
   in
   printLn "[Test Case 1]";
   nntestNumericalValidationGeneric false (nnCopy network) 0 dp;
@@ -105,10 +112,10 @@ let nntestNumericalValidation = lam.
   printLn "[Test Case 3]";
   nntestNumericalValidationGeneric false (nnCopy network) 4 dp;
   let network: NeuralNetwork =
-    nnMake [nnFullyConnected 4 8,
-            nnReLU 8,
-            nnFullyConnected 8 10]
-           (nnSoftMaxCrossEntropyLoss 10)
+    nnMake [nnFullyConnected bsize 4 8,
+            nnReLU bsize 8,
+            nnFullyConnected bsize 8 10]
+           (nnSoftMaxCrossEntropyLoss bsize 10)
   in
   printLn "[Test Case 4]";
   nntestNumericalValidationGeneric false (nnCopy network) 0 dp;
