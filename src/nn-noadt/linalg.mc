@@ -86,12 +86,12 @@ let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Flo
   parallelLoop (muli m n) iterfun
 -/
 
--- Applies the operation z += x * y^T where
+-- Applies the operation z = x * y^T where
 --  s_max is the iteration limit in the S-dimension
 --  x is a SxM-dim tensor (S no. of M-dim vectors)
 --  y is a SxN-dim tensor (S no. of N-dim vectors)
 --  z is a SxMxN tensor (S no. of MxN matrices)
-let #var"tensorOpExn: z += x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
+let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam x. lam y. lam z.
   let z_shape = tensorShape z in
   --let s = get z_shape 0 in
@@ -112,9 +112,8 @@ let #var"tensorOpExn: z += x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Te
     let y_idx = addi col (muli s_idx n) in
     -- z_jk += x_j * y_k
     tensorLinearSetExn z z_idx (
-      addf (tensorLinearGetExn z z_idx)
-           (mulf (tensorLinearGetExn x x_idx)
-                 (tensorLinearGetExn y y_idx))
+      mulf (tensorLinearGetExn x x_idx)
+           (tensorLinearGetExn y y_idx)
     )
   in
   -- apply the iterfun
@@ -325,11 +324,11 @@ let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Int -> Tensor[Float] -> Tensor[F
   parallelLoop (muli s_max m) iterfun
 
 
--- Inplace vector addition where
+-- Inplace vector assignment where
 --  s_max is the iteration limit in the S-dimension
 --  x is a Sx[_] input tensor
 --  z is a Sx[_]-dim output tensor with the same shape as x
-let #var"tensorOpExn: z += x": Int -> Tensor[Float] -> Tensor[Float] -> () =
+let #var"tensorOpExn: z = x": Int -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam x. lam z.
   let s = get (tensorShape x) 0 in
   let m = divi (tensorSize x) s in
@@ -337,8 +336,7 @@ let #var"tensorOpExn: z += x": Int -> Tensor[Float] -> Tensor[Float] -> () =
   -- applies the iteration on each index in the M-dimension
   let iterfun: Int -> () = lam i.
     tensorLinearSetExn z i (
-        addf (tensorLinearGetExn z i)
-             (tensorLinearGetExn x i)
+        tensorLinearGetExn x i
     )
   in
   -- apply the iterfun
@@ -483,13 +481,17 @@ let #var"tensorOpExn: Dim1Reduce(z, dst = z_0, op = +)": Tensor[Float] -> () =
   lam z.
   let s = get (tensorShape z) 0 in
   let m = divi (tensorSize z) s in
-  -- Iterate over the sub idx's, sequentially add up the S-dimension
-  let iterfun: Int -> () = lam i.
-    let v = seqLoopAcc (tensorLinearGetExn z i) (subi s 1) (lam acc: Float. lam j: Int.
-      let s_idx = addi j 1 in
-      let s_offset = muli s_idx m in
-      addf acc (tensorLinearGetExn z (addi s_offset i))
-    ) in
-    tensorLinearSetExn z i v
-  in
-  parallelLoop m iterfun
+  -- Only reduce if S > 1, we assume that it is below...
+  if leqi s 1 then
+    ()
+  else
+    -- Iterate over the sub idx's, sequentially add up the S-dimension
+    let iterfun: Int -> () = lam i.
+      let v = seqLoopAcc (tensorLinearGetExn z i) (subi s 1) (lam acc: Float. lam j: Int.
+        let s_idx = addi j 1 in
+        let s_offset = muli s_idx m in
+        addf acc (tensorLinearGetExn z (addi s_offset i))
+      ) in
+      tensorLinearSetExn z i v
+    in
+    parallelLoop m iterfun

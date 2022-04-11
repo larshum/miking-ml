@@ -19,7 +19,8 @@ let mnist_network: Int -> NeuralNetwork = lam batchsize.
 
 
 let mnist_runBenchmark = lam training_data. lam validation_data.
-  let params = {{{{{{nnVanillaSGDParameters
+  let params = {{{{{{{nnVanillaSGDParameters
+    with batchsize = 32}
     with init_alpha = 0.9}
     with init_lambda = 0.0}
     with epochs = 10}

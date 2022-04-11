@@ -131,9 +131,9 @@ let nnComponentBackpropExn: Int -> Tensor[Float] -> Tensor[Float] -> NeuralNetwo
   let ty = comp.ty in
   if eqi ty nnCompType_FullyConnected then (
     -- Backpropagate on the Bias
-    #var"tensorOpExn: z += x" s_max output_grads comp.b_grads;
+    #var"tensorOpExn: z = x" s_max output_grads comp.b_grads;
     -- Backpropagate on the Weights
-    #var"tensorOpExn: z += x * y^T" s_max output_grads comp_inputs comp.w_grads;
+    #var"tensorOpExn: z = x * y^T" s_max output_grads comp_inputs comp.w_grads;
     -- Set the gradient of the input to this component
     #var"tensorOpExn: z = (x^T * W)^T" s_max output_grads comp.w comp.in_grads;
     comp.in_grads
@@ -175,8 +175,6 @@ let nnComponent_TEMP_ScaleGradients: Float -> NeuralNetworkComponent -> () =
 
 let nnComponent_TEMP_ApplyGradients: Float -> NeuralNetworkComponent -> () =
   lam scalar: Float. lam comp: NeuralNetworkComponent.
-  -- First reduce the gradients to the zero index
-  nnComponent_TEMP_ReduceGradients comp;
   let ty = comp.ty in
   if eqi ty nnCompType_FullyConnected then (
     #var"tensorOpExn: Z += x * scalar(c)" 0 comp.w_grads scalar comp.w;

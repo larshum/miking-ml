@@ -216,8 +216,11 @@ let nnGradientDescentExn: NeuralNetwork -> Float -> Float -> DataBatch -> () =
   nnBackpropExn network batch;
   -- apply the mini-batch regularization ( grad = sum(grad) / |B| )
   let batchsize_regularizer = divf 1.0 (int2float batchsize) in
+  -- TEMP: Would like to just iterate over the gradients at this stage...
   foldl (lam x: Int. lam comp: NeuralNetworkComponent.
-    -- TEMP: Would like to just iterate over the gradients at this stage...
+    -- First reduce the gradients to the zero index
+    nnComponent_TEMP_ReduceGradients comp;
+    -- Then scale the gradients
     nnComponent_TEMP_ScaleGradients batchsize_regularizer comp; 0
   ) 0 network.components;
   -- apply any weight regularization
