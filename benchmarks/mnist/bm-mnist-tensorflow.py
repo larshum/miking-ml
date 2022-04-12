@@ -69,8 +69,8 @@ def main():
 
     print("starting...")
     model.fit(
-        x=training_data,
-        y=training_labels,
+        x=train_data,
+        y=train_labels,
         batch_size=batch_size,
         epochs=epochs,
         verbose=2,
