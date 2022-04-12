@@ -5,7 +5,6 @@ import os
 import sys
 import time
 
-import tensorflow as tf
 import numpy as np
 
 
@@ -23,6 +22,10 @@ def main():
                         help="Number of CPU threads to use.")
     args = parser.parse_args()
 
+    if not args.cuda:
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+    import tensorflow as tf
     print(f"TensorFlow version: {tf.__version__}")
 
     batch_size = 128
@@ -68,6 +71,7 @@ def main():
     )
 
     print("starting...")
+    t_start = time.time()
     model.fit(
         x=train_data,
         y=train_labels,
@@ -77,7 +81,9 @@ def main():
         validation_data=(valid_data, valid_labels),
         use_multiprocessing=False
     )
-    print("DONE!")
+    t_end = time.time()
+    t_elapsed_ms = (t_end - t_start) * 1000.0
+    print(f"Done (elapsed time: {t_elapsed_ms} ms)")
 
 
 def load_mnist(path):
