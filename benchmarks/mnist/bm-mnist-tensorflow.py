@@ -63,7 +63,7 @@ def main():
     model.add(tf.keras.layers.Dense(10, activation="softmax"))
     model.compile(
         optimizer=sgd_optimizer,
-        loss="categorical_crossentropy",
+        loss="sparse_categorical_crossentropy",
         metrics=["accuracy"]
     )
 
@@ -93,7 +93,7 @@ def load_mnist(path):
             parts = line.split()
             # <class> <pixel 1> <pixel 2> ...
             data.append([float(i) / 255.0 for i in parts[1:]])
-            labels.append([int(i == parts[0]) for i in range(10)])
+            labels.append(int(parts[0]))
             sys.stderr.write(f"\rpoints scanned: {i + 1}")
 
             # record the number of scanned points, for sanity checking later on...
@@ -102,7 +102,7 @@ def load_mnist(path):
     sys.stderr.write("\n")
 
     expected_data_dim = (n_points, 784)
-    expected_label_dim = (n_points, 10)
+    expected_label_dim = (n_points,)
 
     # convert and reshape (reshape for sanity checking)
     data = np.array(data).astype("float32").reshape(*expected_data_dim)
