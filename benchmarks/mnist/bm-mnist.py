@@ -31,8 +31,8 @@ def main():
                         help="Number of CPU threads to use.")
     args = parser.parse_args()
 
-    training_kwargs = {"batch_size": 32}
-    validation_kwargs = {"batch_size": 32}
+    training_kwargs = {"batch_size": 128}
+    validation_kwargs = {"batch_size": 128}
 
     device = "cuda" if args.cuda else "cpu"
     if device == "cuda":
@@ -40,7 +40,7 @@ def main():
             print("error: cannot run with CUDA backend when it is not available")
             sys.exit(1)
         # CUDA settings
-        cuda_kwargs = {"num_workers": 128,
+        cuda_kwargs = {"num_workers": 1,
                        "pin_memory": True,
                        "shuffle": True}
         training_kwargs.update(cuda_kwargs)
