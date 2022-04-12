@@ -12,19 +12,20 @@ let cifar10_network: Int -> NeuralNetwork = lam batchsize.
   nnMake [
            nnFullyConnected batchsize 3072 3072,
            nnReLU batchsize 3072,
-           nnFullyConnected batchsize 3072 128,
-           nnReLU batchsize 128,
-           nnFullyConnected batchsize 128 10,
+           nnFullyConnected batchsize 3072 1024,
+           nnReLU batchsize 1024,
+           nnFullyConnected batchsize 1024 10,
            nnSoftMax batchsize 10
          ]
          (nnCrossEntropyLoss batchsize 10)
 
 
 let cifar10_runBenchmark = lam training_data. lam validation_data.
-  let params = {{{{{{{nnVanillaSGDParameters
-    with batchsize = 16}
+  let params = {{{{{{{{nnVanillaSGDParameters
+    with batchsize = 64}
     with epochs = 100}
-    with init_alpha = 0.9}
+    with init_alpha = 0.01}
+    with decay_alpha = 0.01}
     with init_lambda = 0.0}
     with printStatus = true}
     --with printStatus = false}

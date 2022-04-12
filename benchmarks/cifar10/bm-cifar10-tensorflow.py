@@ -28,10 +28,10 @@ def main():
     import tensorflow as tf
     print(f"TensorFlow version: {tf.__version__}")
 
-    batch_size = 128
+    batch_size = 64
     epochs = 100
-    learning_rate = 0.9
-    gamma = 0.9
+    learning_rate = 0.01
+    gamma = 0.99
 
     train_data, train_labels = load_cifar10(args.training_set)
     valid_data, valid_labels = load_cifar10(args.validation_set)
@@ -62,7 +62,7 @@ def main():
     model = tf.keras.Sequential()
     model.add(tf.keras.Input((3072,)))
     model.add(tf.keras.layers.Dense(3072, activation="relu"))
-    model.add(tf.keras.layers.Dense(128, activation="relu"))
+    model.add(tf.keras.layers.Dense(1024, activation="relu"))
     model.add(tf.keras.layers.Dense(10, activation="softmax"))
     model.compile(
         optimizer=sgd_optimizer,
