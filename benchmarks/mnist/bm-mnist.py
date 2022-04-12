@@ -6,6 +6,7 @@
 import argparse
 import os
 import sys
+import time
 
 import torch
 import torch.nn as nn
@@ -69,14 +70,21 @@ def main():
     # Shrinks the learning rate by gamma every step_size
     scheduler = ExponentialLR(optimizer, gamma=gamma)
 
+    t_start = time.time()
+
     # Train the model
-    n_epochs = 10
+    n_epochs = 100
     log_interval = 200
     nn_accuracy(network, device, validation_loader)
     for epoch in range(1, n_epochs + 1):
         nn_train(network, device, training_loader, optimizer, epoch, log_interval)
         nn_accuracy(network, device, validation_loader)
         scheduler.step()
+
+    t_end = time.time()
+
+    t_elapsed_ms = (t_end - t_start) * 1000.0
+    print(f"Elapsed time: {t_elapsed_ms} ms")
 
 
 class CustomMNISTDataset(torch.utils.data.Dataset):
