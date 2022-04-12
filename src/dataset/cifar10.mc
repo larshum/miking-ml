@@ -35,13 +35,13 @@ let datasetCifar10Class2string: Int -> String = lam i.
     join ["INVALID_CLASS(", int2string i, ")"]
 
 -- A data point in CIFAR-10 is and int in [0,9] that specifies the class and a
--- 3072x1 Float tensor/vector that contains the values for each pixel at each
--- level, where the value is normalized to a float in [0,1] instead of an
+-- 3072 Float tensor that contains the values for each pixel at each
+-- level, where the value is regularized to a float in [0,1] instead of an
 -- integer between [0,255].
 let datasetLoadCifar10: ([Int] -> ([Int] -> Float) -> Tensor[Float]) -> String -> [DataPoint] = lam tensorCreate. lam filename.
   let print_status = true in
   let convfn = lam i. divf (int2float i) 255.0 in
-  let dim = [3072,1] in
+  let dim = [3072] in
   -- let dim = [32,32,3] in -- this is the actual dimension to be used in the future
   datasetLoadGenericIntclassInt2Float print_status convfn dim tensorCreate filename
 

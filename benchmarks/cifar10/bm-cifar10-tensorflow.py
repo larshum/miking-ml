@@ -98,6 +98,8 @@ def load_cifar10(path):
                 break
             parts = line.split()
             # <class> <pixel 1> <pixel 2> ...
+            cls = int(parts[0])
+            assert cls in range(10)
             data.append([float(i) / 255.0 for i in parts[1:]])
             labels.append(int(parts[0]))
             sys.stderr.write(f"\rpoints scanned: {i + 1}")

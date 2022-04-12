@@ -30,7 +30,7 @@ let datasetMnistClass2string: Int -> String = lam i.
 let datasetLoadMnist: ([Int] -> ([Int] -> Float) -> Tensor[Float]) -> String -> [DataPoint] = lam tensorCreate. lam filename.
   let print_status = true in
   let convfn = lam i. divf (int2float i) 255.0 in
-  let dim = [784,1] in
+  let dim = [784] in
   datasetLoadGenericIntclassInt2Float print_status convfn dim tensorCreate filename
 
 -- Preconfigured instantiations for loading the dataset with different tensor backends
