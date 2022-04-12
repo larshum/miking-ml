@@ -23,6 +23,8 @@ def main():
                         help="Number of CPU threads to use.")
     args = parser.parse_args()
 
+    print(f"TensorFlow version: {tf.__version__}")
+
     batch_size = 128
     epochs = 100
     learning_rate = 0.9
@@ -66,7 +68,10 @@ def main():
         x=training_data,
         y=training_labels,
         batch_size=batch_size,
-        epochs=epochs
+        epochs=epochs,
+        verbose=2,
+        validation_data=(valid_data, valid_labels),
+        use_multiprocessing=False
     )
     print("DONE!")
 
