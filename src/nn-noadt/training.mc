@@ -105,7 +105,7 @@ let nnTrainSGD =
     print s
     --; flushStdout ()
   in
-  --accelerate -- -/
+  accelerate -- -/
   (
     (
       if params.evaluateBeforeFirstEpoch then
@@ -114,17 +114,13 @@ let nnTrainSGD =
             wrappedPrint "evalating performance...\n"
           else ()
         );
-        accelerate
-        (
-          let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
-          if params.printStatus then
-            wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
-          else ()
-        )
+        let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
+        if params.printStatus then
+          wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
+        else ()
       else ()
     );
     seqLoopAcc (params.init_alpha, params.init_lambda) params.epochs (lam acc: (Float, Float). lam epoch_idx.
-      let t_epoch_start = wallTimeMs () in
       let epoch: Int = addi epoch_idx 1 in
       let alpha: Float = acc.0 in
       let lambda: Float = acc.1 in
@@ -135,18 +131,14 @@ let nnTrainSGD =
           wrappedPrint "[lambda = "; printFloat lambda; wrappedPrint "]\n"
         else ()
       );
-      accelerate
-      (
-        seqLoop (length training_batches) (lam batch_idx.
-          ( -- print round count (on a single line)
-            if params.printStatus then (
-              wrappedPrint "\rround "; printFloat (int2float (addi batch_idx 1)); wrappedPrint "/"; printFloat (int2float rounds)
-            ) else ()
-          );
-          nnGradientDescentExn network alpha lambda (get training_batches batch_idx)
-        )
+      seqLoop (length training_batches) (lam batch_idx.
+        ( -- print round count (on a single line)
+          if params.printStatus then (
+            wrappedPrint "\rround "; printFloat (int2float (addi batch_idx 1)); wrappedPrint "/"; printFloat (int2float rounds)
+          ) else ()
+        );
+        nnGradientDescentExn network alpha lambda (get training_batches batch_idx)
       );
-      let t_epoch_after_training = wallTimeMs () in
       wrappedPrint "\n";
       (
         if params.evaluateBetweenEpochs then
@@ -155,28 +147,12 @@ let nnTrainSGD =
               wrappedPrint "evalating performance...\n"
             else ()
           );
-          accelerate
-          (
-            let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
-            if params.printStatus then
-              wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
-            else ()
-          )
-        else ()
-      );
-      let t_epoch_after_eval = wallTimeMs () in
-      (
-        if params.printStatus then
-          let epoch_training_time = subf t_epoch_after_training t_epoch_start in
-          wrappedPrint "Training time: "; printFloat epoch_training_time; wrappedPrint " ms\n";
-          if params.evaluateBetweenEpochs then
-            let epoch_total_time = subf t_epoch_after_eval t_epoch_start in
-            wrappedPrint "(Including evaluation: "; printFloat epoch_total_time; wrappedPrint " ms)\n";
-            ()
+          let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
+          if params.printStatus then
+            wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
           else ()
         else ()
       );
-      let t_epoch_after_eval = wallTimeMs () in
       -- prepare for the next iteration
       let decayed_alpha = mulf alpha (subf 1.0 params.decay_alpha) in
       let decayed_lambda = mulf lambda (subf 1.0 params.decay_lambda) in
