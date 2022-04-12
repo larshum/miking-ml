@@ -51,6 +51,10 @@ def main():
         decay_rate=gamma,
         staircase=True
     )
+    sgd_optimizer = tf.keras.optimizers.SGD(
+        learning_rate=lr_scheduler,
+        momentum=0.0
+    )
 
     model = tf.keras.Sequential()
     model.add(tf.keras.Input((784,)))
@@ -58,7 +62,7 @@ def main():
     model.add(tf.keras.layers.Dense(128, activation="relu"))
     model.add(tf.keras.layers.Dense(10, activation="softmax"))
     model.compile(
-        optimizer=lr_scheduler,
+        optimizer=sgd_optimizer,
         loss="categorical_crossentropy",
         metrics=["accuracy"]
     )
