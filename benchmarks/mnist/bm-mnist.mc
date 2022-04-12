@@ -10,6 +10,8 @@ include "../../src/dataset/mnist.mc"
 
 let mnist_network: Int -> NeuralNetwork = lam batchsize.
   nnMake [
+           nnFullyConnected batchsize 784 784,
+           nnReLU batchsize 784,
            nnFullyConnected batchsize 784 128,
            nnReLU batchsize 128,
            nnFullyConnected batchsize 128 10,
