@@ -77,6 +77,7 @@ let nnLossFunctionApplyExn: Int -> Tensor[Float] -> NeuralNetworkLossFunction ->
     inputs
   ) else if eqi ty nnLossfnType_SoftMaxCrossEntropyLoss then (
     -- Setting in-grads here as we will re-use this in the backpropagation later
+    print "[";
     #var"tensorOpExn: z = SoftMax(x)" s_max inputs lossfn.softmax_bufs lossfn.in_grads;
     lossfn.in_grads
   ) else (
@@ -96,6 +97,7 @@ let nnLossFunctionBackpropExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetw
     -- backprop SoftMaxCrossEntropyLoss: SoftMax(input) - 1-Hot(y)
     -- NOTE We already have the SoftMax computed in the lossfn.in_grads, this is redundant if we have computed the loss before
     --#var"tensorOpExn: z = SoftMax(x)" s_max inputs lossfn.softmax_bufs lossfn.in_grads;
+    print "]";
     #var"tensorOpExp: z += 1-Hot(y) * scalar(c)" s_max expecteds (negf 1.0) lossfn.in_grads;
     lossfn.in_grads
   ) else (
