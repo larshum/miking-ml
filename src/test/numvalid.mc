@@ -96,7 +96,7 @@ let nntestNumericalValidation = lam.
     correct_outidx = [1],
     correct_linear_outidx = 1
   } in
-  let bsize = 1 in
+  let bsize = 4 in
   let network: NeuralNetwork =
     nnMake [nnFullyConnected bsize 4 6,
             nnReLU bsize 6,
