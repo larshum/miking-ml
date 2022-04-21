@@ -73,7 +73,6 @@ let nnLossFunctionComputeLoss: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetw
 let nnLossFunctionApplyExn: Int -> Tensor[Float] -> NeuralNetworkLossFunction -> Tensor[Float] =
   lam s_max: Int. lam inputs: Tensor[Float]. lam lossfn: NeuralNetworkLossFunction.
   let ty: Int = lossfn.ty in
-  print "[";
   if eqi ty nnLossfnType_CrossEntropyLoss then (
     inputs
   ) else if eqi ty nnLossfnType_SoftMaxCrossEntropyLoss then (
@@ -87,7 +86,6 @@ let nnLossFunctionApplyExn: Int -> Tensor[Float] -> NeuralNetworkLossFunction ->
 let nnLossFunctionBackpropExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetworkLossFunction -> Tensor[Float] =
   lam s_max: Int. lam inputs: Tensor[Float]. lam expecteds: Tensor[Int]. lam lossfn: NeuralNetworkLossFunction.
   let ty: Int = lossfn.ty in
-  print "]";
   if eqi ty nnLossfnType_CrossEntropyLoss then (
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop CrossEntropyLoss: [0, ..., 0, -1/p_y, 0, ..., 0]
