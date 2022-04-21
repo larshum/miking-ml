@@ -137,12 +137,12 @@ let nnComputeLossesExn: NeuralNetwork -> DataBatch -> Tensor[Float] =
   --let s_max = get (tensorShape batch.inputs) 0 in
   --let outputs = nnEvalExn network batch.inputs in
   ---- Return the evaluated losses
-  let s_max = get (tensorShape inputs) 0 in
+  let s_max = get (tensorShape batch.inputs) 0 in
   let comp_out = foldl (lam prevouts: Tensor[Float]. lam comp: NeuralNetworkComponent.
       -- Applies this component and returns the resulting output to the next
       -- iteration (the final iteration becomes the nnEvalExn output)
       nnComponentApplyExn s_max prevouts comp
-    ) inputs network.components
+    ) batch.inputs network.components
   in
   nnLossFunctionComputeLoss s_max comp_out batch.correct_linear_outidxs network.lossfn
 
