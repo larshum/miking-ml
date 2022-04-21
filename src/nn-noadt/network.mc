@@ -118,11 +118,13 @@ let nnEvalExn: NeuralNetwork -> Tensor[Float] -> Tensor[Float] =
   lam network. lam inputs.
   use NNStandard in
   let s_max = get (tensorShape inputs) 0 in
-  foldl (lam prevouts: Tensor[Float]. lam comp: NeuralNetworkComponent.
-    -- Applies this component and returns the resulting output to the next
-    -- iteration (the final iteration becomes the nnEvalExn output)
-    nnComponentApplyExn s_max prevouts comp
-  ) inputs network.components
+  let comp_out = foldl (lam prevouts: Tensor[Float]. lam comp: NeuralNetworkComponent.
+      -- Applies this component and returns the resulting output to the next
+      -- iteration (the final iteration becomes the nnEvalExn output)
+      nnComponentApplyExn s_max prevouts comp
+    ) inputs network.components
+  in
+  nnLossFunctionApplyExn s_max comp_out network.lossfn
 
 
 -- Computes the loss on the provided data point when evaluated on the network.
@@ -135,7 +137,7 @@ let nnComputeLossesExn: NeuralNetwork -> DataBatch -> Tensor[Float] =
   let s_max = get (tensorShape batch.inputs) 0 in
   let outputs = nnEvalExn network batch.inputs in
   -- Return the evaluated losses
-  nnLossFunctionApplyExn s_max outputs batch.correct_linear_outidxs network.lossfn
+  nnLossFunctionComputeLoss s_max outputs batch.correct_linear_outidxs network.lossfn
 
 
 -- Computes the gradients for the components with respect to the loss function,

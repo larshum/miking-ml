@@ -54,7 +54,7 @@ let nnLossFunctionInGrads: NeuralNetworkLossFunction -> Tensor[Float] = lam loss
 let nnLossFunctionOutBufs: NeuralNetworkLossFunction -> Tensor[Float] = lam lossfn.
   lossfn.out_bufs
 
-let nnLossFunctionApplyExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetworkLossFunction -> Tensor[Float] =
+let nnLossFunctionComputeLoss: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetworkLossFunction -> Tensor[Float] =
   lam s_max: Int. lam inputs: Tensor[Float]. lam expecteds: Tensor[Int]. lam lossfn: NeuralNetworkLossFunction.
   let ty: Int = lossfn.ty in
   if eqi ty nnLossfnType_CrossEntropyLoss then (
@@ -67,6 +67,20 @@ let nnLossFunctionApplyExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetwork
     lossfn.out_bufs
   ) else (
     lossfn.out_bufs --error (join ["nnLossFunctionApplyExn not handled for ", nnLossFunctionName lossfn])
+  )
+
+-- Application in the case that there is something interesting to return here...
+let nnLossFunctionApplyExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetworkLossFunction -> Tensor[Float] =
+  lam s_max: Int. lam inputs: Tensor[Float]. lam lossfn: NeuralNetworkLossFunction.
+  let ty: Int = lossfn.ty in
+  if eqi ty nnLossfnType_CrossEntropyLoss then (
+    inputs
+  ) else if eqi ty nnLossfnType_SoftMaxCrossEntropyLoss then (
+    -- Setting in-grads here as we will re-use this in the backpropagation later
+    #var"tensorOpExn: z = SoftMax(x)" s_max inputs lossfn.softmax_bufs lossfn.in_grads;
+    lossfn.in_grads
+  ) else (
+    inputs --error (join ["nnLossFunctionApplyExn not handled for ", nnLossFunctionName lossfn])
   )
 
 let nnLossFunctionBackpropExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetworkLossFunction -> Tensor[Float] =
