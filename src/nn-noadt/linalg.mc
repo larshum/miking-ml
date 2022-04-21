@@ -194,28 +194,7 @@ let #var"tensorOpExn: z = ReLU(x)": Int -> Tensor[Float] -> Tensor[Float] -> () 
     tensorLinearSetExn z i (if gtf x_i 0.0 then x_i else 0.0)
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun
-
-
-/-
--- Applies the operation z = dReLU(x) where
---  x is an arbitrary tensor
---  z is an output tensor with the same shape as x
--- and
---  dReLU(x) = [max(0,sgn(x_i)) | x_i in x]
-let #var"tensorOpExn: z = dReLU(x)": Tensor[Float] -> Tensor[Float] -> () =
-  lam x. lam z.
-  let m = tensorSize x in
-  -- applies ReLU for each index
-  let iterfun: Int -> () = lam i.
-    let x_i = tensorLinearGetExn x i in
-    tensorLinearSetExn z i (if gti x_i 0 then 1.0 else 0.0)
-  in
-  -- apply the iterfun
-  parallelLoop m iterfun
--/
-
--- todo: implement "tensorOpExn: z = ReLU(Wx + b)" for efficiency
+  seqLoop (muli s_max m) iterfun
 
 
 -- Applies the operation z = SoftMax(x) where
@@ -236,7 +215,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     tensorLinearSetExn z i (exp x_i)
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun;
+  seqLoop (muli s_max m) iterfun;
 
   -- sum up all the exponentianted values in the S-dimension...
   let iterfunSummarize: Int -> () = lam s_idx.
@@ -246,7 +225,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     ) in
     tensorLinearSetExn expsumbuf s_idx expsum
   in
-  parallelLoop s_max iterfunSummarize;
+  seqLoop s_max iterfunSummarize;
 
   -- ... and divide it into the exponentiated values to regularize them into a distribution
   let iterfunRegularize: Int -> () = lam i.
@@ -256,7 +235,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     tensorLinearSetExn z i (divf z_i expsum)
   in
   -- apply the normalization iterfun
-  parallelLoop (muli s_max m) iterfunRegularize
+  seqLoop (muli s_max m) iterfunRegularize
 
 
 -- [Backwards propagation on the standalone ReLU function]
@@ -282,7 +261,7 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Int -> Tensor[Float] -> Tensor[Float
     tensorLinearSetExn z i (mulf dhds_ii dldh_i)
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun
+  seqLoop (muli s_max m) iterfun
 
 
 -- [Backwards propagation on the standalone SoftMax function]
