@@ -53,8 +53,9 @@ let #var"tensorOpExn: z = Wx+B": Int -> Tensor[Float] -> Tensor[Float] -> Tensor
     -- dot product over the N-dimension
     -- The row below beforms the following operation: v = W_i,* · x^T + b_i
     let acc_init: Float = tensorLinearGetExn b i in
+    let w_offset = muli n i in
     let v = seqLoopAcc (acc_init) n (lam acc: Float. lam j: Int.
-      addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
+      addf acc (mulf (tensorLinearGetExn w (addi w_offset j))
                      (tensorLinearGetExn x (addi x_offset j)))
     ) in
     tensorLinearSetExn z z_idx v -- z_i = v = W_i,* · x^T + b_i
