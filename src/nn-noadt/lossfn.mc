@@ -70,7 +70,7 @@ let nnLossFunctionComputeLoss: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetw
   )
 
 -- Application in the case that there is something interesting to return here...
-let nnLossFunctionApplyExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetworkLossFunction -> Tensor[Float] =
+let nnLossFunctionApplyExn: Int -> Tensor[Float] -> NeuralNetworkLossFunction -> Tensor[Float] =
   lam s_max: Int. lam inputs: Tensor[Float]. lam lossfn: NeuralNetworkLossFunction.
   let ty: Int = lossfn.ty in
   if eqi ty nnLossfnType_CrossEntropyLoss then (
