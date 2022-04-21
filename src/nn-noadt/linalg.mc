@@ -99,25 +99,25 @@ let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Ten
   let n = get z_shape 2 in
   let m_x_n = muli m n in
 
-  -- iterating function over all MxN rows and columns (limited by s_max)
+  -- iterate over all N columns (limited by s_max)
   let iterfun: Int -> () = lam i.
-    let s_idx = divi i m_x_n in
-
-    let z_idx = i in
-    -- Convert i to be linear in the MxN dimension
-    let i = modi i m_x_n in
-    let row = divi i n in
+    let s_idx = divi i n in
     let col = modi i n in
-    let x_idx = addi row (muli s_idx m) in
-    let y_idx = addi col (muli s_idx n) in
-    -- z_jk += x_j * y_k
-    tensorLinearSetExn z z_idx (
-      mulf (tensorLinearGetExn x x_idx)
-           (tensorLinearGetExn y y_idx)
+
+    let z_offset = addi (muli s_idx m_x_n) col in
+    let x_offset = muli s_idx m in
+    let y_offset = muli s_idx n in
+
+    let y_val = tensorLinearGetExn y (addi y_offset col) in
+    seqLoopAcc (z_offset) m (lam z_idx: Int. lam row: Int.
+      --let z_idx = addi z_offset (muli row n) in
+      tensorLinearSetExn z z_idx (
+        mulf y_val (tensorLinearGetExn x (addi x_offset row))
+      );
+      addi z_idx n
     )
   in
-  -- apply the iterfun
-  parallelLoop (muli s_max m_x_n) iterfun
+  parallelLoop (muli s_max n)
 
 
 -- Applies the operation z = (x^T * W)^T where
