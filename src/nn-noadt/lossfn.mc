@@ -95,7 +95,7 @@ let nnLossFunctionBackpropExn: Int -> Tensor[Float] -> Tensor[Int] -> NeuralNetw
     -- NOTE: Assumes that input and r.in_grad has the same dimensions
     -- backprop SoftMaxCrossEntropyLoss: SoftMax(input) - 1-Hot(y)
     -- NOTE We already have the SoftMax computed in the lossfn.in_grads, this is redundant if we have computed the loss before
-    #var"tensorOpExn: z = SoftMax(x)" s_max inputs lossfn.softmax_bufs lossfn.in_grads;
+    --#var"tensorOpExn: z = SoftMax(x)" s_max inputs lossfn.softmax_bufs lossfn.in_grads;
     #var"tensorOpExp: z += 1-Hot(y) * scalar(c)" s_max expecteds (negf 1.0) lossfn.in_grads;
     lossfn.in_grads
   ) else (
