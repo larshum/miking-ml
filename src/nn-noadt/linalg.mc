@@ -109,13 +109,14 @@ let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Ten
     let y_offset = muli s_idx n in
 
     let y_val = tensorLinearGetExn y (addi y_offset col) in
-    seqLoopAcc (z_offset) m (lam z_idx: Int. lam row: Int.
+    seqLoopAcc z_offset m (lam z_idx: Int. lam row: Int.
       --let z_idx = addi z_offset (muli row n) in
       tensorLinearSetExn z z_idx (
         mulf y_val (tensorLinearGetExn x (addi x_offset row))
       );
       addi z_idx n
-    )
+    );
+    ()
   in
   parallelLoop (muli s_max n) iterfun
 
