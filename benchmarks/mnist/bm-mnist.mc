@@ -15,8 +15,8 @@ let mnist_network: Int -> NeuralNetwork = lam batchsize.
            nnFullyConnected batchsize 784 128,
            nnReLU batchsize 128,
            nnFullyConnected batchsize 128 10
-         ]
-         (nnSoftMaxCrossEntropyLoss batchsize 10)
+           , nnSoftMax batchsize 10] (nnCrossEntropyLoss batchsize 10)
+           --] (nnSoftMaxCrossEntropyLoss batchsize 10)
 
 
 let mnist_runBenchmark = lam training_data. lam validation_data.
