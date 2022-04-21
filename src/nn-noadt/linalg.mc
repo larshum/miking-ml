@@ -117,7 +117,7 @@ let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Ten
       addi z_idx n
     )
   in
-  parallelLoop (muli s_max n)
+  parallelLoop (muli s_max n) iterfun
 
 
 -- Applies the operation z = (x^T * W)^T where
