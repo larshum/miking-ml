@@ -14,6 +14,7 @@ include "../nn-noadt/network.mc"
 --  dp: The datapoint to use for validation
 let nntestNumericalValidationGeneric =
   lam printDetails: Bool.
+  lam bsize: Int.
   lam network: NeuralNetwork.
   lam componentIdx: Int.
   lam dp: DataPoint.
@@ -21,14 +22,14 @@ let nntestNumericalValidationGeneric =
   let dPrintLn = lam s. if printDetails then printLn s else () in
   let dPrint = lam s. if printDetails then print s else () in
   let batch: DataBatch = {
-    inputs = tensorCreateCArrayFloat (cons 1 (tensorShape dp.input)) (lam idx.
+    inputs = tensorCreateCArrayFloat (cons bsize (tensorShape dp.input)) (lam idx.
       tensorGetExn dp.input (tail idx)
     ),
-    correct_linear_outidxs = tensorCreateCArrayInt [1] (lam. dp.correct_linear_outidx)
+    correct_linear_outidxs = tensorCreateCArrayInt [bsize] (lam. dp.correct_linear_outidx)
   } in
   dPrintLn "computing analytical gradients...";
   nnBackpropExn network batch;
-  let baseline_loss = tensorGetExn (nnComputeLossesExn network batch) [0] in
+  let baseline_loss = tensorGetExn (nnComputeLossesExn network batch) [subi bsize 1] in
   dPrintLn (join ["baseline loss: ", float2string baseline_loss]);
   let h = 1.0e-4 in
   dPrintLn (join ["computing numerical gradients using stepsize h = ", float2string h]);
