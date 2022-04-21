@@ -107,11 +107,11 @@ let nntestNumericalValidation = lam.
            (nnCrossEntropyLoss bsize 10)
   in
   printLn "[Test Case 1]";
-  nntestNumericalValidationGeneric false (nnCopy network) 0 dp;
+  nntestNumericalValidationGeneric false bsize (nnCopy network) 0 dp;
   printLn "[Test Case 2]";
-  nntestNumericalValidationGeneric false (nnCopy network) 2 dp;
+  nntestNumericalValidationGeneric false bsize (nnCopy network) 2 dp;
   printLn "[Test Case 3]";
-  nntestNumericalValidationGeneric false (nnCopy network) 4 dp;
+  nntestNumericalValidationGeneric false bsize (nnCopy network) 4 dp;
   let network: NeuralNetwork =
     nnMake [nnFullyConnected bsize 4 8,
             nnReLU bsize 8,
@@ -119,8 +119,8 @@ let nntestNumericalValidation = lam.
            (nnSoftMaxCrossEntropyLoss bsize 10)
   in
   printLn "[Test Case 4]";
-  nntestNumericalValidationGeneric false (nnCopy network) 0 dp;
+  nntestNumericalValidationGeneric false bsize (nnCopy network) 0 dp;
   printLn "[Test Case 5]";
-  nntestNumericalValidationGeneric false (nnCopy network) 2 dp;
+  nntestNumericalValidationGeneric false bsize (nnCopy network) 2 dp;
   ()
 
