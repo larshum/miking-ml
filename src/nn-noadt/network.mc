@@ -144,7 +144,7 @@ let nnComputeLossesExn: NeuralNetwork -> DataBatch -> Tensor[Float] =
       nnComponentApplyExn s_max prevouts comp
     ) inputs network.components
   in
-  nnLossFunctionComputeLoss s_max outputs batch.correct_linear_outidxs network.lossfn
+  nnLossFunctionComputeLoss s_max comp_out batch.correct_linear_outidxs network.lossfn
 
 
 -- Computes the gradients for the components with respect to the loss function,
