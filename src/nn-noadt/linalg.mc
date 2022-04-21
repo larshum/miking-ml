@@ -194,7 +194,7 @@ let #var"tensorOpExn: z = ReLU(x)": Int -> Tensor[Float] -> Tensor[Float] -> () 
     tensorLinearSetExn z i (if gtf x_i 0.0 then x_i else 0.0)
   in
   -- apply the iterfun
-  seqLoop (muli s_max m) iterfun
+  parallelLoop (muli s_max m) iterfun
 
 
 -- Applies the operation z = SoftMax(x) where
@@ -215,7 +215,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     tensorLinearSetExn z i (exp x_i)
   in
   -- apply the iterfun
-  seqLoop (muli s_max m) iterfun;
+  parallelLoop (muli s_max m) iterfun;
 
   -- sum up all the exponentianted values in the S-dimension...
   let iterfunSummarize: Int -> () = lam s_idx.
@@ -225,7 +225,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     ) in
     tensorLinearSetExn expsumbuf s_idx expsum
   in
-  seqLoop s_max iterfunSummarize;
+  parallelLoop s_max iterfunSummarize;
 
   -- ... and divide it into the exponentiated values to regularize them into a distribution
   let iterfunRegularize: Int -> () = lam i.
@@ -235,7 +235,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     tensorLinearSetExn z i (divf z_i expsum)
   in
   -- apply the normalization iterfun
-  seqLoop (muli s_max m) iterfunRegularize
+  parallelLoop (muli s_max m) iterfunRegularize
 
 
 -- [Backwards propagation on the standalone ReLU function]
@@ -261,7 +261,7 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Int -> Tensor[Float] -> Tensor[Float
     tensorLinearSetExn z i (mulf dhds_ii dldh_i)
   in
   -- apply the iterfun
-  seqLoop (muli s_max m) iterfun
+  parallelLoop (muli s_max m) iterfun
 
 
 -- [Backwards propagation on the standalone SoftMax function]
