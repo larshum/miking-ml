@@ -26,16 +26,8 @@ typedef struct Rec5 {float _0; float _1;} Rec5;
 
 static cublasHandle_t _cublas_handle;
 
-/*
-cublasStatus_t cublasSgemvBatched(cublasHandle_t handle, cublasOperation_t trans,
-                                  int m, int n,
-                                  const float           *alpha,
-                                  const float           *Aarray[], int lda,
-                                  const float           *xarray[], int incx,
-                                  const float           *beta,
-                                  float           *yarray[], int incy,
-                                  int batchCount);
-*/
+#define USE_CUBLAS_GEMV
+#define USE_CUBLAS_GER
 
 __host__ __device__ int64_t cartesian_to_linear_index0(int64_t dims1[3], int64_t rank1) {
   {
@@ -246,6 +238,8 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
   (n = ((w_shape.seq)[0]));
   int64_t m_x_n = m * n;
 
+#ifdef USE_CUBLAS_GEMV
+  // GEMV CODE
   for (int64_t s = 0; s < s_max; ++s) {
     cublasScopy(
       _cublas_handle,
@@ -275,7 +269,8 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
   }
   cudaDeviceSynchronize();
   GPU_UTILS_CHECK_CUDA_ERROR();
-  /* OLD CODE:
+#else
+  // GENERATED CODE
   int64_t t28;
   (t28 = (s_max * m));
   {
@@ -287,7 +282,7 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
     cudaDeviceSynchronize();
     GPU_UTILS_CHECK_CUDA_ERROR();
   }
-  */
+#endif
 }
 __host__ __device__ int64_t t29(Tensor x2, Tensor z1, int64_t x_offset1, float y_val, int64_t z_idx1, int64_t row) {
   int64_t t30;
@@ -357,6 +352,8 @@ __host__ void tensorOpExn__z___x___y_T(int64_t s_max1, Tensor x2, Tensor y, Tens
   int64_t m_x_n;
   (m_x_n = (m1 * n2));
 
+#ifdef USE_CUBLAS_GER
+  // CUBLAS CODE
   float alpha = 1.0;
   for (int64_t s = 0; s < s_max1; ++s) {
     float *x_data = &x2.data[s * m1];
@@ -374,8 +371,8 @@ __host__ void tensorOpExn__z___x___y_T(int64_t s_max1, Tensor x2, Tensor y, Tens
   }
   cudaDeviceSynchronize();
   GPU_UTILS_CHECK_CUDA_ERROR();
-
-  /* OLD CODE
+#else
+  // GENERATED CODE
   int64_t t37;
   (t37 = (s_max1 * n2));
   {
@@ -387,7 +384,7 @@ __host__ void tensorOpExn__z___x___y_T(int64_t s_max1, Tensor x2, Tensor y, Tens
     cudaDeviceSynchronize();
     GPU_UTILS_CHECK_CUDA_ERROR();
   }
-  */
+#endif
 }
 __host__ __device__ float t38(Tensor x3, Tensor w2, int64_t m2, int64_t x_offset2, int64_t j1, float acc5, int64_t i12) {
   int64_t t39;
