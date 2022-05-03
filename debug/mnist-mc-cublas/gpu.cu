@@ -347,6 +347,26 @@ __host__ void tensorOpExn__z___x___y_T(int64_t s_max1, Tensor x2, Tensor y, Tens
   (n2 = ((z_shape.seq)[1]));
   int64_t m_x_n;
   (m_x_n = (m1 * n2));
+
+  float alpha = 1.0;
+  for (int64_t s = 0; s < s_max; ++s) {
+    float *x_data = &x2.data[s * m1];
+    float *y_data = &y.data[s * n2];
+    float *z_data = &z.data[s * m_x_n];
+    cublasSger(
+      _cublas_handle,
+      (int) m1, (int) n2,
+      &alpha,
+      x_data, 1, /* incx */
+      y_data, 1, /* incy */
+      z_data, m1 /* lda */
+    );
+    GPU_UTILS_CHECK_CUDA_ERROR();
+  }
+  cudaDeviceSynchronize();
+  GPU_UTILS_CHECK_CUDA_ERROR();
+
+  /* OLD CODE
   int64_t t37;
   (t37 = (s_max1 * n2));
   {
@@ -358,6 +378,7 @@ __host__ void tensorOpExn__z___x___y_T(int64_t s_max1, Tensor x2, Tensor y, Tens
     cudaDeviceSynchronize();
     GPU_UTILS_CHECK_CUDA_ERROR();
   }
+  */
 }
 __host__ __device__ float t38(Tensor x3, Tensor w2, int64_t m2, int64_t x_offset2, int64_t j1, float acc5, int64_t i12) {
   int64_t t39;
