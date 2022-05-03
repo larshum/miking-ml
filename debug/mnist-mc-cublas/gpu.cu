@@ -26,7 +26,7 @@ typedef struct Rec5 {float _0; float _1;} Rec5;
 
 static cublasHandle_t _cublas_handle;
 
-// /*
+/*
 cublasStatus_t cublasSgemvBatched(cublasHandle_t handle, cublasOperation_t trans,
                                   int m, int n,
                                   const float           *alpha,
@@ -35,7 +35,7 @@ cublasStatus_t cublasSgemvBatched(cublasHandle_t handle, cublasOperation_t trans
                                   const float           *beta,
                                   float           *yarray[], int incy,
                                   int batchCount);
-// */
+*/
 
 __host__ __device__ int64_t cartesian_to_linear_index0(int64_t dims1[3], int64_t rank1) {
   {
@@ -237,12 +237,10 @@ __global__ void loopKernel(int64_t n1, Tensor w1, Tensor x1, Tensor b1, Tensor z
   }
 }
 
-#define MAX_S_MAX (256)
-
 __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor b1, Tensor z) {
-  const float *w_batch[MAX_S_MAX];
-  const float *x_batch[MAX_S_MAX];
-  float *y_batch[MAX_S_MAX];
+  //const float *w_batch[MAX_S_MAX];
+  //const float *x_batch[MAX_S_MAX];
+  //float *y_batch[MAX_S_MAX];
   Seq w_shape;
   (w_shape = tensor_shape((w1.dims), (w1.rank)));
   int64_t m;
@@ -251,24 +249,24 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
   (n = ((w_shape.seq)[0]));
   int64_t m_x_n = m * n;
 
-  if (s_max > MAX_S_MAX) {
-    fprintf(stderr, "internal error, max batch size breached... (got %ld, max is %d)\n", s_max, MAX_S_MAX);
-    return;
-  }
+  //if (s_max > MAX_S_MAX) {
+  //  fprintf(stderr, "internal error, max batch size breached... (got %ld, max is %d)\n", s_max, MAX_S_MAX);
+  //  return;
+  //}
 
   // Set up the batches
-  for (int64_t s = 0; s < s_max; ++s) {
-    w_batch[s] = w1.data;
-    x_batch[s] = &x1.data[s * n];
-    y_batch[s] = &z.data[s * m];
-  }
+  //for (int64_t s = 0; s < s_max; ++s) {
+  //  w_batch[s] = w1.data;
+  //  x_batch[s] = &x1.data[s * n];
+  //  y_batch[s] = &z.data[s * m];
+  //}
 
   for (int64_t s = 0; s < s_max; ++s) {
     cublasScopy(
       _cublas_handle,
       n,
       b1.data, 1, /* incx */
-      y_batch[s], 1 /* incy */
+      &z.data[s * m], 1 /* incy */
     );
     GPU_UTILS_CHECK_CUDA_ERROR();
   }
@@ -277,18 +275,19 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
 
   float alpha = 1.0;
   float beta = 1.0;
-  cublasSgemvBatched(
-    _cublas_handle,
-    CUBLAS_OP_N,
-    (int) m, (int) n,
-    &alpha,
-    w_batch, (int) m, /* lda */
-    x_batch, 1, /* incx */
-    &beta,
-    y_batch, 1, /* incy */
-    s_max
-  );
-  GPU_UTILS_CHECK_CUDA_ERROR();
+  for (int64_t s = 0; s < s_max; ++s) {
+    cublasSgemvBatched(
+      _cublas_handle,
+      CUBLAS_OP_N,
+      (int) m, (int) n,
+      &alpha,
+      w1.data, (int) m, /* lda */
+      &x1.data[s * n], 1, /* incx */
+      &beta,
+      &z.data[s * m], 1 /* incy */
+    );
+    GPU_UTILS_CHECK_CUDA_ERROR();
+  }
   cudaDeviceSynchronize();
   GPU_UTILS_CHECK_CUDA_ERROR();
   /* OLD CODE:
