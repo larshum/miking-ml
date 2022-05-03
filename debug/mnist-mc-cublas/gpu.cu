@@ -26,6 +26,17 @@ typedef struct Rec5 {float _0; float _1;} Rec5;
 
 static cublasHandle_t _cublas_handle;
 
+cublasStatus_t cublasSgemvBatched(cublasHandle_t handle, cublasOperation_t trans,
+                                  int m, int n,
+                                  const float           *alpha,
+                                  const float           *Aarray[], int lda,
+                                  const float           *xarray[], int incx,
+                                  const float           *beta,
+                                  float           *yarray[], int incy,
+                                  int batchCount);
+
+
+
 __host__ __device__ int64_t cartesian_to_linear_index0(int64_t dims1[3], int64_t rank1) {
   {
     int64_t t;
