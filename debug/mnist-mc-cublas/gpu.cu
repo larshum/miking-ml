@@ -276,7 +276,7 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
   float alpha = 1.0;
   float beta = 1.0;
   for (int64_t s = 0; s < s_max; ++s) {
-    cublasSgemvBatched(
+    cublasSgemv(
       _cublas_handle,
       CUBLAS_OP_N,
       (int) m, (int) n,
