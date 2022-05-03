@@ -257,7 +257,7 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
       CUBLAS_OP_N,
       (int) m, (int) n,
       &alpha,
-      w1.data, (int) n, /* lda */
+      w1.data, (int) m, /* lda */
       x_data, 1, /* incx */
       &beta,
       y_data, 1 /* incy */
