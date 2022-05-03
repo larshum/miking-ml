@@ -244,10 +244,10 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
       CUBLAS_OP_N,
       (int) m, (int) n,
       &alpha,
-      w1.data, (int) m, /* lda */
-      x1.data, 0, /* incx */
+      w1.data, (int) n, /* lda */
+      x1.data, 1, /* incx */
       &beta,
-      b1.data, 0 /* incy */
+      b1.data, 1 /* incy */
     );
     GPU_UTILS_CHECK_CUDA_ERROR();
   }

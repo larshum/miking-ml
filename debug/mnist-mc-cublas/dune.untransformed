@@ -11,4 +11,4 @@ boot owl
 )
   (link_flags -I 
 %%PWD%%
- -cclib -lgpu -cclib -lcudart -cclib -lstdc++))
+ -cclib -lgpu -cclib -lcudart -cclib -lstdc++ -cclib -lcublas))
