@@ -35,11 +35,15 @@ let seqLoopFoldl: Float -> Int -> (Float -> Int -> Float) -> Float =
 --  x is a SxN-dim tensor (S no. of N-dim input vectors)
 --  B is a M-dim vector
 --  z is a SxM-dim output tensor
+--
+-- Note that B must be indexed in column-major order. Such that
+-- for m in [0,M) and n in [0,N), W_mn is accessed as `tensorGetExn w [n,m]`.
 let #var"tensorOpExn: z = Wx+B": Int -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam w. lam x. lam b. lam z.
   let w_shape = tensorShape w in
-  let m = get w_shape 0 in
-  let n = get w_shape 1 in
+  -- column-major order, shape is reversed
+  let m = get w_shape 1 in
+  let n = get w_shape 0 in
 
   -- iterating function over indices in z (up to s_max)
   let iterfun: Int -> () = lam i.
@@ -54,7 +58,8 @@ let #var"tensorOpExn: z = Wx+B": Int -> Tensor[Float] -> Tensor[Float] -> Tensor
     -- The row below beforms the following operation: v = W_i,* · x^T + b_i
     let acc_init: Float = tensorLinearGetExn b i in
     let v = seqLoopAcc (acc_init) n (lam acc: Float. lam j: Int.
-      addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
+      -- w_ij = w[i + (j*m)] (column-major order)
+      addf acc (mulf (tensorLinearGetExn w (addi i (muli m j)))
                      (tensorLinearGetExn x (addi x_offset j)))
     ) in
     tensorLinearSetExn z z_idx v -- z_i = v = W_i,* · x^T + b_i
@@ -62,41 +67,20 @@ let #var"tensorOpExn: z = Wx+B": Int -> Tensor[Float] -> Tensor[Float] -> Tensor
   -- apply the iterfun
   parallelLoop (muli s_max m) iterfun
 
-/-
--- Applies the operation Z = x * y^T where
---  x is a M-dim vector
---  y is a N-dim vector
---  Z is a MxN-dim matrix
-let #var"tensorOpExn: z = x * y^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
-  lam x. lam y. lam z.
-  let z_shape = tensorShape z in
-  let m = get z_shape 0 in
-  let n = get z_shape 1 in
-  -- iterating function over all MxN rows and columns
-  let iterfun: Int -> () = lam i.
-    let row = divi i n in
-    let col = modi i n in
-    -- z_jk = x_j * y_k
-    tensorLinearSetExn z i (
-      mulf (tensorLinearGetExn x row)
-           (tensorLinearGetExn y col)
-    )
-  in
-  -- apply the iterfun
-  parallelLoop (muli m n) iterfun
--/
-
 -- Applies the operation z = x * y^T where
 --  s_max is the iteration limit in the S-dimension
 --  x is a SxM-dim tensor (S no. of M-dim vectors)
 --  y is a SxN-dim tensor (S no. of N-dim vectors)
 --  z is a SxMxN tensor (S no. of MxN matrices)
+--
+-- Note that z must be indexed in column-major order. Such that for s in [0,S),
+-- for m in [0,M) and n in [0,N), W_mn is accessed as `tensorGetExn w [s,n,m]`.
 let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam x. lam y. lam z.
   let z_shape = tensorShape z in
   --let s = get z_shape 0 in
-  let m = get z_shape 1 in
-  let n = get z_shape 2 in
+  let m = get z_shape 2 in
+  let n = get z_shape 1 in
   let m_x_n = muli m n in
 
   -- iterate over all N columns (limited by s_max)
@@ -104,18 +88,22 @@ let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Ten
     let s_idx = divi i n in
     let col = modi i n in
 
-    let z_offset = addi (muli s_idx m_x_n) col in
+    let z_offset = addi (muli s_idx m_x_n) (muli m col) in
     let x_offset = muli s_idx m in
     let y_offset = muli s_idx n in
 
     let y_val = tensorLinearGetExn y (addi y_offset col) in
     seqLoopAcc z_offset m (lam z_idx: Int. lam row: Int.
-      --let z_idx = addi z_offset (muli row n) in
       tensorLinearSetExn z z_idx (
         mulf y_val (tensorLinearGetExn x (addi x_offset row))
       );
-      addi z_idx n
+      addi z_idx 1
     );
+    --seqLoop m (lam row: Int.
+    --  tensorLinearSetExn z (addi z_offset row) (
+    --    mulf y_val (tensorLinearGetExn x (addi x_offset row))
+    --  )
+    --);
     ()
   in
   parallelLoop (muli s_max n) iterfun
@@ -126,11 +114,14 @@ let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Ten
 --  x is a SxM-dim tensor (S no. of M-dim vectors)
 --  W is a MxN matrix
 --  z is a SxN-dim output tensor (S no. of M-dim vectors)
+--
+-- Note that B must be indexed in column-major order. Such that
+-- for m in [0,M) and n in [0,N), W_mn is accessed as `tensorGetExn w [n,m]`.
 let #var"tensorOpExn: z = (x^T * W)^T": Int -> Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
   lam s_max. lam x. lam w. lam z.
   let w_shape = tensorShape w in
-  let m = get w_shape 0 in
-  let n = get w_shape 1 in
+  let m = get w_shape 1 in
+  let n = get w_shape 0 in
 
   -- iterating function over the N-dimension in z
   let iterfun: Int -> () = lam j.
@@ -144,37 +135,13 @@ let #var"tensorOpExn: z = (x^T * W)^T": Int -> Tensor[Float] -> Tensor[Float] ->
     -- dot product over x and the j'th column in W
     -- The row below beforms the following operation: v = x · W_*,j
     let v = seqLoopAcc 0.0 m (lam acc: Float. lam i: Int.
-        addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
+        addf acc (mulf (tensorLinearGetExn w (addi i (muli m j)))
                        (tensorLinearGetExn x (addi x_offset i)))
     ) in
     tensorLinearSetExn z z_idx v -- z_j = v = x · W_*,j
   in
   -- apply the iterfun
   parallelLoop (muli s_max n) iterfun
-
-/-
--- Applies the operation z += (x^T * W)^T where
---  x is a M-dim vector
---  W is a MxN matrix
---  z is a N-dim vector
-let #var"tensorOpExn: z += (x^T * W)^T": Tensor[Float] -> Tensor[Float] -> Tensor[Float] -> () =
-  lam x. lam w. lam z.
-  let w_shape = tensorShape w in
-  let m = get w_shape 0 in
-  let n = get w_shape 1 in
-  -- iterating function over the N-dimension in z
-  let iterfun: Int -> () = lam j.
-    -- dot product over x and the j'th column in W
-    -- The row below beforms the following operation: z_j += v = z_j + x · W_*,j
-    let v = seqLoopAcc (tensorLinearGetExn z j) m (lam acc: Float. lam i: Int.
-      addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
-                     (tensorLinearGetExn x i))
-    ) in
-    tensorLinearSetExn z j v -- z_j = v = z_j + (x · W_*,j)  =>  z_j += x · W_*,j
-  in
-  -- apply the iterfun
-  parallelLoop n iterfun
--/
 
 
 -- Applies the operation z = ReLU(x) where
