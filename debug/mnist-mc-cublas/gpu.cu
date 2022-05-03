@@ -235,12 +235,12 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
   int64_t m_x_n = m * n;
 
   for (int64_t s = 0; s < s_max; ++s) {
-    float *x_data = &x1.data[s * n];
+    float *z_data = &z.data[s * m];
     cublasScopy(
       _cublas_handle,
       n,
       b1.data, 1, /* incx */
-      x_data, 1 /* incy */
+      z_data, 1 /* incy */
     );
     GPU_UTILS_CHECK_CUDA_ERROR();
   }
