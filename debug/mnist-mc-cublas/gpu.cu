@@ -22,6 +22,9 @@ typedef struct Rec3 {Tensor inputs; Tensor1 correct_linear_outidxs;} Rec3;
 typedef struct Seq2 {Rec3 (*seq); int64_t len;} Seq2;
 typedef struct Rec4 {int64_t epochs; int64_t batchsize; float init_alpha; float decay_alpha; float init_lambda; char printStatus; float decay_lambda; char evaluateBetweenEpochs; char evaluateBeforeFirstEpoch;} Rec4;
 typedef struct Rec5 {float _0; float _1;} Rec5;
+
+static cublasHandle_t _cublas_handle;
+
 __host__ __device__ int64_t cartesian_to_linear_index0(int64_t dims1[3], int64_t rank1) {
   {
     int64_t t;
@@ -228,21 +231,30 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
   (m = ((w_shape.seq)[1]));
   int64_t n;
   (n = ((w_shape.seq)[0]));
-  int64_t t28;
-  (t28 = (s_max * m));
+  int64_t m_x_n = m * n;
 
-  // gemv
   float alpha = 1.0;
   float beta = 1.0;
-  cublasHandle_t handle = ...;
-  cublasStatus_t stat = cublasSgemv(
-    handle,
-    CUBLAS_OP_N,
-    &alpha,
-    (int) m,
-    (int) n,
-  );
+  for (int64_t s = 0; s < s_max; ++s) {
+    float *w_data = w1.data + (s * m_x_n);
+    float *b_data = b1.data + (s * m);
+    cublasSgemv(
+      _cublas_handle,
+      CUBLAS_OP_N,
+      (int) m, (int) n,
+      &alpha,
+      w1.data, (int) m, /* lda */
+      x1.data, 0, /* incx */
+      &beta,
+      b1.data, 0 /* incy */
+    );
+    GPU_UTILS_CHECK_CUDA_ERROR();
+  }
+  cudaDeviceSynchronize();
+  GPU_UTILS_CHECK_CUDA_ERROR();
   /* OLD CODE:
+  int64_t t28;
+  (t28 = (s_max * m));
   {
     int64_t niterations = t28;
     int64_t tpb = 256;
@@ -2096,6 +2108,10 @@ void cuda_wrap(int64_t nnCompType_FullyConnected, int64_t nnCompType_ReLU, int64
 extern "C" void vv4F90aVQU5(value nnCompType_FullyConnected, value nnCompType_ReLU, value nnCompType_SoftMax, value nnLossfnType_CrossEntropyLoss, value nnLossfnType_SoftMaxCrossEntropyLoss, value params, value network6, value rounds, value training_batches, value validation_batches) {
   CAMLparam5(nnCompType_FullyConnected, nnCompType_ReLU, nnCompType_SoftMax, nnLossfnType_CrossEntropyLoss, nnLossfnType_SoftMaxCrossEntropyLoss);
   CAMLxparam5(params, network6, rounds, training_batches, validation_batches);
+  // Creating cuBlas context
+  cublasCreate(&_cublas_handle);
+  GPU_UTILS_CHECK_CUDA_ERROR();
+
   int64_t tensor_count = 0;
   int64_t gpu_tmp = Long_val(nnCompType_FullyConnected);
   int64_t gpu_tmp1 = Long_val(nnCompType_ReLU);
@@ -2880,6 +2896,8 @@ extern "C" void vv4F90aVQU5(value nnCompType_FullyConnected, value nnCompType_Re
   cudaFree((gpu_tmp9.seq));
   GPU_UTILS_CHECK_CUDA_ERROR();
   cudaFree(t_state);
+  GPU_UTILS_CHECK_CUDA_ERROR();
+  cublasDestroy(_cublas_handle);
   GPU_UTILS_CHECK_CUDA_ERROR();
   CAMLreturn0;
 }
