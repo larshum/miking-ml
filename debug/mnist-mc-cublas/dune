@@ -1,0 +1,14 @@
+(env
+  (dev
+    (flags (
+:standard -w -a 
+))
+    (ocamlc_flags (-without-runtime))))
+(executable
+  (name program)
+  (libraries 
+boot owl
+)
+  (link_flags -I 
+/tmp/tmp84
+ -cclib -lgpu -cclib -lcudart -cclib -lstdc++))
