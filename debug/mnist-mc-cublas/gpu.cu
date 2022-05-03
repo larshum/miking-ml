@@ -234,20 +234,33 @@ __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor 
   (n = ((w_shape.seq)[0]));
   int64_t m_x_n = m * n;
 
+  for (int64_t s = 0; s < s_max; ++s) {
+    float *x_data = &x1.data[s * n];
+    cublasScopy(
+      _cublas_handle,
+      n,
+      b1.data, 1, /* incx */
+      x_data, 1 /* incy */
+    );
+    GPU_UTILS_CHECK_CUDA_ERROR();
+  }
+  cudaDeviceSynchronize();
+  GPU_UTILS_CHECK_CUDA_ERROR();
+
   float alpha = 1.0;
   float beta = 1.0;
   for (int64_t s = 0; s < s_max; ++s) {
-    float *w_data = w1.data + (s * m_x_n);
-    float *b_data = b1.data + (s * m);
+    float *x_data = &x1.data[s * n];
+    float *y_data = &z.data[s * m];
     cublasSgemv(
       _cublas_handle,
       CUBLAS_OP_N,
       (int) m, (int) n,
       &alpha,
       w1.data, (int) n, /* lda */
-      x1.data, 1, /* incx */
+      x_data, 1, /* incx */
       &beta,
-      b1.data, 1 /* incy */
+      y_data, 1 /* incy */
     );
     GPU_UTILS_CHECK_CUDA_ERROR();
   }
