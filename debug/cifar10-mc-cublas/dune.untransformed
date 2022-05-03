@@ -10,5 +10,5 @@
 boot owl
 )
   (link_flags -I 
-/tmp/tmp84
+%%PWD%%
  -cclib -lgpu -cclib -lcudart -cclib -lstdc++))

@@ -228,7 +228,6 @@ __global__ void loopKernel(int64_t n1, Tensor w1, Tensor x1, Tensor b1, Tensor z
     (idx = (idx + stride));
   }
 }
-
 __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor b1, Tensor z) {
   Seq w_shape;
   (w_shape = tensor_shape((w1.dims), (w1.rank)));
@@ -2145,7 +2144,7 @@ void cuda_wrap(int64_t nnCompType_FullyConnected, int64_t nnCompType_ReLU, int64
   }
   ;
 }
-extern "C" void vv4F90aVQU5(value nnCompType_FullyConnected, value nnCompType_ReLU, value nnCompType_SoftMax, value nnLossfnType_CrossEntropyLoss, value nnLossfnType_SoftMaxCrossEntropyLoss, value params, value network6, value rounds, value training_batches, value validation_batches) {
+extern "C" void vXrkk6MJAk3(value nnCompType_FullyConnected, value nnCompType_ReLU, value nnCompType_SoftMax, value nnLossfnType_CrossEntropyLoss, value nnLossfnType_SoftMaxCrossEntropyLoss, value params, value network6, value rounds, value training_batches, value validation_batches) {
   CAMLparam5(nnCompType_FullyConnected, nnCompType_ReLU, nnCompType_SoftMax, nnLossfnType_CrossEntropyLoss, nnLossfnType_SoftMaxCrossEntropyLoss);
   CAMLxparam5(params, network6, rounds, training_batches, validation_batches);
   // Creating cuBlas context
@@ -2941,6 +2940,6 @@ extern "C" void vv4F90aVQU5(value nnCompType_FullyConnected, value nnCompType_Re
   GPU_UTILS_CHECK_CUDA_ERROR();
   CAMLreturn0;
 }
-extern "C" void vAiCRgHg0yi(value (*args), int argc) {
-  return vv4F90aVQU5((args[0]), (args[1]), (args[2]), (args[3]), (args[4]), (args[5]), (args[6]), (args[7]), (args[8]), (args[9]));
+extern "C" void vtCOqRaPrWZ(value (*args), int argc) {
+  return vXrkk6MJAk3((args[0]), (args[1]), (args[2]), (args[3]), (args[4]), (args[5]), (args[6]), (args[7]), (args[8]), (args[9]));
 }
