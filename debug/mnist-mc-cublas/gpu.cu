@@ -9,6 +9,7 @@
 #include "caml/memory.h"
 #include "caml/mlvalues.h"
 #include "gpu-utils.cu"
+#include "cublas_v2.h"
 enum tensor_state {STATE_OK, STATE_CPU_INVALID, STATE_GPU_INVALID, STATE_RETURNED};
 __managed__ enum tensor_state (*t_state);
 typedef struct Tensor {int64_t id; float (*data); int64_t dims[3]; int64_t rank; int64_t offset; int64_t size;} Tensor;
