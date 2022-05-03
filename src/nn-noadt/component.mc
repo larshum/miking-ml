@@ -29,19 +29,13 @@ type NeuralNetworkComponent = {
 
 let nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> Int -> String -> NeuralNetworkComponent =
   lam indim: [Int]. lam outdim: [Int]. lam weights: [Tensor[Float]]. lam max_batchsize: Int. lam name: String.
-  let sizeIndim = foldl muli 1 indim in
-  let sizeOutdim = foldl muli 1 outdim in
   if eqString name "FullyConnected" then
-    -- w is a [col x row] matrix
-    -- b is a [row] vector
     if neqi (length weights) 2 then error "expected exactly 2 weights: w and b" else --continue
     let w = get weights 0 in
     let b = get weights 1 in
     if neqi (tensorRank w) 2 then error "w must be a rank 2 tensor" else --continue
     if neqi (tensorRank b) 1 then error "b must be a rank 1 tensor" else --continue
-    if neqi (get (tensorShape w) 1) (tensorSize b) then error "size mismatch on b and w" else --continue
-    if neqi  (tensorSize b) sizeOutdim then error "size mismatch on b and outdim size" else --continue
-    if neqi (get (tensorShape w) 0) sizeIndim then error "size mismatch on cols in w and indim size" else --continue
+    if neqi (get (tensorShape w) 0) (tensorSize b) then error "size mismatch on b and w" else --continue
     {
       ty = nnCompType_FullyConnected,
       w = w,
@@ -53,8 +47,6 @@ let nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> Int -> String -> Ne
       softmax_bufs = tensorCreateCArrayFloat [1] (lam. 0.0) -- dummy
     }
   else if eqString name "ReLU" then
-    if neqi (length weights) 0 then error "expected exactly 0 weights" else --continue
-    if neqi sizeIndim sizeOutdim then error "size mismatch on indim and outdim size" else --continue
     {
       ty = nnCompType_ReLU,
       w = tensorCreateCArrayFloat [1] (lam. 0.0), -- dummy
@@ -66,8 +58,6 @@ let nnComponentMakeExn: [Int] -> [Int] -> [Tensor[Float]] -> Int -> String -> Ne
       softmax_bufs = tensorCreateCArrayFloat [1] (lam. 0.0) -- dummy
     }
   else if eqString name "SoftMax" then
-    if neqi (length weights) 0 then error "expected exactly 0 weights" else --continue
-    if neqi sizeIndim sizeOutdim then error "size mismatch on indim and outdim size" else --continue
     {
       ty = nnCompType_SoftMax,
       w = tensorCreateCArrayFloat [1] (lam. 0.0), -- dummy
@@ -238,7 +228,7 @@ let nnFullyConnected: Int -> Int -> Int -> NeuralNetworkComponent = lam max_batc
   use NNStandardComponents in
   let mu = 0.0 in
   let sigma = 0.001 in
-  let w = tensorCreateCArrayFloat [indim,outdim] (lam. gaussianSample mu sigma) in
+  let w = tensorCreateCArrayFloat [outdim,indim] (lam. gaussianSample mu sigma) in
   let b = tensorCreateCArrayFloat [outdim] (lam. gaussianSample mu sigma) in
   nnComponentMakeExn [indim] [outdim] [w,b] max_batchsize "FullyConnected"
 
