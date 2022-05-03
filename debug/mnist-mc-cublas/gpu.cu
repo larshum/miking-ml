@@ -26,7 +26,7 @@ typedef struct Rec5 {float _0; float _1;} Rec5;
 
 static cublasHandle_t _cublas_handle;
 
-/*
+// /*
 cublasStatus_t cublasSgemvBatched(cublasHandle_t handle, cublasOperation_t trans,
                                   int m, int n,
                                   const float           *alpha,
@@ -35,7 +35,7 @@ cublasStatus_t cublasSgemvBatched(cublasHandle_t handle, cublasOperation_t trans
                                   const float           *beta,
                                   float           *yarray[], int incy,
                                   int batchCount);
-*/
+// */
 
 __host__ __device__ int64_t cartesian_to_linear_index0(int64_t dims1[3], int64_t rank1) {
   {
@@ -240,8 +240,8 @@ __global__ void loopKernel(int64_t n1, Tensor w1, Tensor x1, Tensor b1, Tensor z
 #define MAX_S_MAX (256)
 
 __host__ void tensorOpExn__z___Wx_B(int64_t s_max, Tensor w1, Tensor x1, Tensor b1, Tensor z) {
-  float *w_batch[MAX_S_MAX];
-  float *x_batch[MAX_S_MAX];
+  const float *w_batch[MAX_S_MAX];
+  const float *x_batch[MAX_S_MAX];
   float *y_batch[MAX_S_MAX];
   Seq w_shape;
   (w_shape = tensor_shape((w1.dims), (w1.rank)));
