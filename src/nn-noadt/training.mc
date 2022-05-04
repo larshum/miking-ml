@@ -139,7 +139,7 @@ let nnTrainSGD =
         );
         nnGradientDescentExn network alpha lambda (get training_batches batch_idx)
       );
-      wrappedPrint "\n";
+      (if params.printStatus then wrappedPrint "\n"; () else ());
       (
         if params.evaluateBetweenEpochs then
           (
