@@ -10,7 +10,7 @@ MNIST-DIRS=mnist-mc-32f          \
            mnist-mc-cublas       \
            mnist-mc-rowmajor-32f
 
-CIFAR10-BINS=$(foreach d,$(MNIST-DIRS),$(d).exe)
+CIFAR10-BINS=$(foreach d,$(CIFAR10-DIRS),$(d).exe)
 
 MNIST-BINS=$(foreach d,$(MNIST-DIRS),$(d).exe)
 
