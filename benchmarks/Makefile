@@ -1,6 +1,6 @@
 .PHONY: run
 
-SHELL = bash
+SHELL = bash -i
 
 GET_PART = $(word $2,$(subst -, ,$1))
 
@@ -8,7 +8,6 @@ N_RUNS = 10
 VARIANTS = pytorch-cpu pytorch-gpu tensorflow-cpu tensorflow-gpu
 
 run:
-	__conda_init
 	make run-cifar10 run-mnist
 
 run-%:
@@ -41,9 +40,9 @@ run-%:
 	    fi))
 	$(eval TARGETFILE := $*.out)
 	@echo "Running benchmarks on $* ..."
-	@for i in $(shell seq 1 $(N_RUNS)); do                                                          \
-	    echo "  [Run $$i of $(N_RUNS) | Output file: $(TARGETFILE)$$i]";                            \
-	    conda activate $(CONDAENV);                                                    \
+	@__conda_init; conda activate $(CONDAENV);                                         \
+	for i in $(shell seq 1 $(N_RUNS)); do                                              \
+	    echo "  [Run $$i of $(N_RUNS) | Output file: $(TARGETFILE)$$i]";               \
 	    python3 $(PYTHONFILE) $(TRAINFILE) $(VALIDFILE) $(GPUOPTS) > $(TARGETFILE)$$i; \
 	done
 FORCE:
