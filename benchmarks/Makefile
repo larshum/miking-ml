@@ -1,6 +1,6 @@
 .PHONY: run
 
-SHELL = bash -i
+SHELL = bash
 
 GET_PART = $(word $2,$(subst -, ,$1))
 

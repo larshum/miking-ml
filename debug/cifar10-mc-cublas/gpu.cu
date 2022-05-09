@@ -451,16 +451,16 @@ __host__ void tensorOpExn__z____x_T___W__T(int64_t s_max2, Tensor x3, Tensor w2,
   float alpha = 1.0;
   float beta = 0.0;
   for (int64_t s = 0; s < s_max2; ++s) {
-    // (y^T * X)^T = X^T * y
+    // (x^T * W)^T = W^T * x
     cublasSgemv(
       _cublas_handle,
       CUBLAS_OP_T,
       (int) m2, (int) n4,
       &alpha,
       w2.data, (int) m2, /* lda */
-      &x3.data[s * n4], 1, /* incx */
+      &x3.data[s * m2], 1, /* incx */
       &beta,
-      &z2.data[s * m2], 1 /* incy */
+      &z2.data[s * n4], 1 /* incy */
     );
     GPU_UTILS_CHECK_CUDA_ERROR();
   }
