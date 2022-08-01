@@ -2,7 +2,7 @@
 -- testing output from component operations
 
 include "common.mc"
-include "../nn-noadt/component.mc"
+include "../nn/component.mc"
 
 let nntestFullyConnected = lam printDetails.
   let dPrintLn = lam s. if printDetails then printLn s else () in

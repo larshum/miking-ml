@@ -5,7 +5,7 @@ include "common.mc"
 include "math.mc"
 include "tensor.mc"
 
-include "../nn-noadt/network.mc"
+include "../nn/network.mc"
 
 -- Numerical validation of the analytically computed gradients
 --  printDetails: Whether or not to print detail in addition to the final difference

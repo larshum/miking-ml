@@ -9,7 +9,7 @@ include "char.mc"
 include "seq.mc"
 include "string.mc"
 
-include "../nn-noadt/network.mc" -- DataPoint type
+include "../nn/network.mc" -- DataPoint type
 include "./_common.mc"
 
 -- Enumeration for CIFAR-10 classes, and their byte-number representation

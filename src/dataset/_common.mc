@@ -7,7 +7,7 @@ include "common.mc"
 include "seq.mc"
 include "string.mc"
 
-include "../nn-noadt/network.mc" -- DataPoint type
+include "../nn/network.mc" -- DataPoint type
 
 -- Generic loader for dataset formatted as ints on a line, where the first int
 -- specifies the class of the datapoint.

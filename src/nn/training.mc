@@ -19,7 +19,7 @@ type SGDParameters = {
 
 let nnVanillaSGDParameters: SGDParameters = {
     init_alpha = 0.9,
-    init_lambda = 0.01,
+    init_lambda = 0.00,
     decay_alpha = 0.1,
     decay_lambda = 0.1,
     batchsize = 32,
@@ -57,76 +57,109 @@ let nnTrainSGD =
     else ()
   );
   (
-    if params.evaluateBeforeFirstEpoch then
-      (
-        if params.printStatus then
-          printLn "evalating performance..."
-        else ()
-      );
-      let accuracy = nnAccuracyProportion params.printStatus network validation_data in
-      if params.printStatus then
-        printLn (join ["Computed accuracy: ", float2string (mulf accuracy 100.0), "%"])
-      else ()
+    if params.printStatus then
+      printLn "Creating batches..."
     else ()
   );
-  recursive let iterate = lam it. lam alpha. lam lambda.
-    if eqi it params.epochs then () else (
+  recursive let batchMakerH = lam dataset: [DataPoint]. lam acc: [DataBatch]. lam i: Int.
+    let datalen = length dataset in
+    (
+      if params.printStatus then
+        print (join ["\r(", int2string (addi i 1), "/", int2string datalen, ")"]);
+        flushStdout ()
+      else ()
+    );
+    if geqi i datalen then
+      acc
+    else
+      let start_idx = i in
+      let end_idx = addi start_idx params.batchsize in
+      let end_idx = if geqi end_idx datalen then datalen else end_idx in
+      let bsize = subi end_idx start_idx in
+      let _fst_dp: DataPoint = get dataset 0 in
+      let datashape = tensorShape _fst_dp.input in
+      let db_inputs = tensorCreateCArrayFloat (cons bsize datashape) (lam idx.
+        let b_idx = addi start_idx (get idx 0) in
+        let d_idx = tail idx in
+        let dp: DataPoint = get dataset b_idx in
+        tensorGetExn dp.input d_idx
+      ) in
+      let db_outidxs = tensorCreateCArrayInt [bsize] (lam idx.
+        let b_idx = addi start_idx (get idx 0) in
+        let dp: DataPoint = get dataset b_idx in
+        dp.correct_linear_outidx
+      ) in
+      let db: DataBatch = {
+        inputs = db_inputs,
+        correct_linear_outidxs = db_outidxs
+      } in
+      batchMakerH dataset
+                  (snoc acc db)
+                  (addi i params.batchsize)
+  in
+  let training_batches = batchMakerH training_data [] 0 in
+  (if params.printStatus then printLn "" else ());
+  let validation_batches = batchMakerH validation_data [] 0 in
+  (if params.printStatus then printLn "" else ());
+  let wrappedPrint: String -> () = lam s.
+    print s
+    --; flushStdout ()
+  in
+  accelerate -- -/
+  (
+    (
+      if params.evaluateBeforeFirstEpoch then
+        (
+          if params.printStatus then
+            wrappedPrint "evalating performance...\n"
+          else ()
+        );
+        let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
+        if params.printStatus then
+          wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
+        else ()
+      else ()
+    );
+    seqLoopAcc (params.init_alpha, params.init_lambda) params.epochs (lam acc: (Float, Float). lam epoch_idx.
+      let epoch: Int = addi epoch_idx 1 in
+      let alpha: Float = acc.0 in
+      let lambda: Float = acc.1 in
       (
         if params.printStatus then
-          printLn (join ["[Iteration ", int2string (addi it 1), "/", int2string params.epochs, "]"]);
-          printLn (join ["alpha = ", float2string alpha]);
-          printLn (join ["lambda = ", float2string lambda])
+          wrappedPrint "[Iteration "; printFloat (int2float epoch); wrappedPrint "/"; printFloat (int2float params.epochs); print "]\n";
+          wrappedPrint "[alpha = "; printFloat alpha; wrappedPrint "]\n";
+          wrappedPrint "[lambda = "; printFloat lambda; wrappedPrint "]\n"
         else ()
       );
-      recursive let run_batchrounds = lam rnd.
-        if eqi rnd rounds then (
-          ( -- LF after the round counter
-            if params.printStatus then
-              printLn ""
-            else ()
-          )
-        ) else (
-          ( -- print round count (on a single line)
-            if params.printStatus then (
-              print (join ["\rround ", int2string (addi rnd 1), "/", int2string rounds]);
-              flushStdout ()
-            ) else ()
-          );
-          recursive let mkbatch = lam acc. lam j.
-            if eqi j params.batchsize then acc else (
-              -- select a datapoint uniformly at random
-              let dp = get training_data (randIntU 0 (length training_data)) in
-              mkbatch (cons dp acc) (addi j 1)
-            )
-          in
-          let batch = mkbatch [] 0 in
-          -- This will have to be accelerated...
-          accelerate (nnGradientDescentExn network alpha lambda batch);
-          --nnGradientDescentExn network alpha lambda batch;
-          run_batchrounds (addi rnd 1)
-        )
-      in
-      run_batchrounds 0;
+      seqLoop (length training_batches) (lam batch_idx.
+        ( -- print round count (on a single line)
+          if params.printStatus then (
+            wrappedPrint "\rround "; printFloat (int2float (addi batch_idx 1)); wrappedPrint "/"; printFloat (int2float rounds)
+          ) else ()
+        );
+        nnGradientDescentExn network alpha lambda (get training_batches batch_idx)
+      );
+      (if params.printStatus then wrappedPrint "\n"; () else ());
       (
         if params.evaluateBetweenEpochs then
           (
             if params.printStatus then
-              printLn "evalating performance..."
+              wrappedPrint "evalating performance...\n"
             else ()
           );
-          let accuracy = nnAccuracyProportion params.printStatus network validation_data in
+          let accuracy = nnAccuracyProportion params.printStatus network validation_batches in
           if params.printStatus then
-            printLn (join ["Computed accuracy: ", float2string (mulf accuracy 100.0), "%"])
+            wrappedPrint "Computed accuracy: "; printFloat (mulf accuracy 100.0); wrappedPrint "%\n"
           else ()
         else ()
       );
       -- prepare for the next iteration
       let decayed_alpha = mulf alpha (subf 1.0 params.decay_alpha) in
       let decayed_lambda = mulf lambda (subf 1.0 params.decay_lambda) in
-      iterate (addi it 1) decayed_alpha decayed_lambda
-    )
-  in
-  iterate 0 params.init_alpha params.init_lambda;
+      (decayed_alpha, decayed_lambda)
+    );
+    ()
+  );
   ( -- final printout
     if params.printStatus then
       printLn "SGD complete."
