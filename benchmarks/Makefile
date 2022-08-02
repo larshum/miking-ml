@@ -47,3 +47,10 @@ run-%:
 	done
 FORCE:
 
+generate:
+	make generate-mnist generate-cifar10
+
+generate-%:
+	mi compile --use-32bit-floats --accelerate --debug-generate $*/bm-$*.mc | awk '{print $$5;}' | xargs -I DIR mv DIR ./gen-$*
+	cp mcore-utils/Makefile ./gen-$*/Makefile
+	cp mcore-utils/dune.untransformed ./gen-$*/dune.untransformed
