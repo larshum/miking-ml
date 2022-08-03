@@ -107,7 +107,7 @@ let #var"tensorOpExn: z = (x^T * W)^T": Int -> Tensor[Float] -> Tensor[Float] ->
     -- dot product over x and the j'th column in W
     -- The row below beforms the following operation: v = x · W_*,j
     let v = seqLoopAcc 0.0 m (lam acc: Float. lam i: Int.
-        addf acc (mulf (tensorLinearGetExn w (addi (muli n i) j))
+        addf acc (mulf (tensorLinearGetExn w (addi i (muli m j)))
                        (tensorLinearGetExn x (addi x_offset i)))
     ) in
     tensorLinearSetExn z z_idx v -- z_j = v = x · W_*,j

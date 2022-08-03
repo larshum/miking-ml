@@ -124,3 +124,6 @@ let nntestNumericalValidation = lam.
   nntestNumericalValidationGeneric false bsize (nnCopy network) 2 dp;
   ()
 
+mexpr
+nntestNumericalValidation ()
+
