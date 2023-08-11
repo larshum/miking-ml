@@ -48,7 +48,7 @@ let #var"tensorOpExn: z = Wx+B": Int -> Tensor[Float] -> Tensor[Float] -> Tensor
     tensorLinearSetExn z z_idx v -- z_i = v = W_i,* · x^T + b_i
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun
+  loop (muli s_max m) iterfun
 
 -- Applies the operation z = x * y^T where
 --  s_max is the iteration limit in the S-dimension
@@ -81,7 +81,7 @@ let #var"tensorOpExn: z = x * y^T": Int -> Tensor[Float] -> Tensor[Float] -> Ten
     );
     ()
   in
-  parallelLoop (muli s_max n) iterfun
+  loop (muli s_max n) iterfun
 
 
 -- Applies the operation z = (x^T * W)^T where
@@ -113,7 +113,7 @@ let #var"tensorOpExn: z = (x^T * W)^T": Int -> Tensor[Float] -> Tensor[Float] ->
     tensorLinearSetExn z z_idx v -- z_j = v = x · W_*,j
   in
   -- apply the iterfun
-  parallelLoop (muli s_max n) iterfun
+  loop (muli s_max n) iterfun
 
 
 -- Applies the operation z = ReLU(x) where
@@ -133,7 +133,7 @@ let #var"tensorOpExn: z = ReLU(x)": Int -> Tensor[Float] -> Tensor[Float] -> () 
     tensorLinearSetExn z i (if gtf x_i 0.0 then x_i else 0.0)
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun
+  loop (muli s_max m) iterfun
 
 
 -- Applies the operation z = SoftMax(x) where
@@ -154,7 +154,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     tensorLinearSetExn z i (exp x_i)
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun;
+  loop (muli s_max m) iterfun;
 
   -- sum up all the exponentianted values in the S-dimension...
   let iterfunSummarize: Int -> () = lam s_idx.
@@ -164,7 +164,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     ) in
     tensorLinearSetExn expsumbuf s_idx expsum
   in
-  parallelLoop s_max iterfunSummarize;
+  loop s_max iterfunSummarize;
 
   -- ... and divide it into the exponentiated values to regularize them into a distribution
   let iterfunRegularize: Int -> () = lam i.
@@ -174,7 +174,7 @@ let #var"tensorOpExn: z = SoftMax(x)": Int -> Tensor[Float] -> Tensor[Float] -> 
     tensorLinearSetExn z i (divf z_i expsum)
   in
   -- apply the normalization iterfun
-  parallelLoop (muli s_max m) iterfunRegularize
+  loop (muli s_max m) iterfunRegularize
 
 
 -- [Backwards propagation on the standalone ReLU function]
@@ -200,7 +200,7 @@ let #var"tensorOpExn: z = d/dx(l(ReLU(x))": Int -> Tensor[Float] -> Tensor[Float
     tensorLinearSetExn z i (mulf dhds_ii dldh_i)
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun
+  loop (muli s_max m) iterfun
 
 
 -- [Backwards propagation on the standalone SoftMax function]
@@ -240,7 +240,7 @@ let #var"tensorOpExn: z = d/dx(l(SoftMax(x)))": Int -> Tensor[Float] -> Tensor[F
     tensorLinearSetExn z (addi s_offset i) v
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun
+  loop (muli s_max m) iterfun
 
 
 -- Inplace vector assignment where
@@ -259,7 +259,7 @@ let #var"tensorOpExn: z = x": Int -> Tensor[Float] -> Tensor[Float] -> () =
     )
   in
   -- apply the iterfun
-  parallelLoop (muli s_max m) iterfun
+  loop (muli s_max m) iterfun
 
 
 -- Inplace scalar multiplication where
@@ -275,7 +275,7 @@ let #var"tensorOpExn: z *= scalar(c)": Int -> Float -> Tensor[Float] -> () =
       mulf (tensorLinearGetExn z i) c
     )
   in
-  parallelLoop (muli s_max m) iterfun
+  loop (muli s_max m) iterfun
 
 
 -- Scalar assignment where
@@ -287,7 +287,7 @@ let #var"tensorOpExn: Z = scalar(c)": Float -> Tensor[Float] -> () =
   let iterfun: Int -> () = lam i.
     tensorLinearSetExn z i c
   in
-  parallelLoop m iterfun
+  loop m iterfun
 
 
 -- Inplace addition of a tensor multiplied by a scalar where
@@ -306,7 +306,7 @@ let #var"tensorOpExn: Z += x * scalar(c)": Int -> Tensor[Float] -> Float -> Tens
            (mulf (tensorLinearGetExn x (addi i x_offset)) c)
     )
   in
-  parallelLoop m iterfun
+  loop m iterfun
 
 
 -- Inplace addition of a tensor multiplied by a scalar where
@@ -326,7 +326,7 @@ let #var"tensorOpExn: z += X * scalar(c)": Int -> Tensor[Float] -> Float -> Tens
            (mulf (tensorLinearGetExn x i) c)
     )
   in
-  parallelLoop m iterfun
+  loop m iterfun
 
 
 -- Inplace 1-hot operation on a vector over the S-dimension
@@ -346,7 +346,7 @@ let #var"tensorOpExp: z += 1-Hot(y) * scalar(c)": Int -> Tensor[Int] -> Float ->
       addf (tensorLinearGetExn z z_idx) c
     )
   in
-  parallelLoop s_max iterfun
+  loop s_max iterfun
 
 
 -- Performs the operator z = -log(x^T * 1-Hot(y)) over the S-dimension
@@ -365,7 +365,7 @@ let #var"tensorOpExn: z = -log(x^T * 1-Hot(y))": Int -> Tensor[Float] -> Tensor[
     let v = negf (log (tensorLinearGetExn x (addi idx x_offset))) in
     tensorLinearSetExn z i v
   in
-  parallelLoop s_max iterfun
+  loop s_max iterfun
 
 
 -- Constructs the vector [0, ..., 0, -1/x_y, 0, ..., 0] in the S-dimension
@@ -389,7 +389,7 @@ let #var"tensorOpExn: z = 1-Hot(y) * scalar(-1/(x^T * 1-Hot(y)))": Int -> Tensor
         tensorLinearSetExn z (addi j offset) 0.0
     )
   in
-  parallelLoop s_max iterfun
+  loop s_max iterfun
 
 
 -- Reduces the tensor z over the S-dimension by addition, s.t. for each tensor
@@ -413,4 +413,4 @@ let #var"tensorOpExn: Dim1Reduce(z, dst = z_0, op = +)": Tensor[Float] -> () =
       ) in
       tensorLinearSetExn z i v
     in
-    parallelLoop m iterfun
+    loop m iterfun
