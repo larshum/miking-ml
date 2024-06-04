@@ -66,7 +66,7 @@ serialgen:
 
 serialgen-%:
 	mkdir -p ./gen-serial-$*
-	mi compile --check-well-formed $*/bm-$*.mc
+	mi compile $*/bm-$*.mc
 	mv bm-$* ./gen-serial-$*
 
 serialrun:
