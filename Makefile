@@ -29,10 +29,10 @@ FORCE:
 dl-data:
 	mkdir -p _data/dl
 	curl -L -o _data/dl/cifar-10-binary.tar.gz http://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
-	curl -L -o _data/dl/train-images-idx3-ubyte.gz http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
-	curl -L -o _data/dl/train-labels-idx1-ubyte.gz http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
-	curl -L -o _data/dl/t10k-images-idx3-ubyte.gz http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
-	curl -L -o _data/dl/t10k-labels-idx1-ubyte.gz http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+	curl -L -o _data/dl/train-images-idx3-ubyte.gz https://storage.googleapis.com/cvdf-datasets/mnist/train-images-idx3-ubyte.gz
+	curl -L -o _data/dl/train-labels-idx1-ubyte.gz https://storage.googleapis.com/cvdf-datasets/mnist/train-labels-idx1-ubyte.gz
+	curl -L -o _data/dl/t10k-images-idx3-ubyte.gz https://storage.googleapis.com/cvdf-datasets/mnist/t10k-images-idx3-ubyte.gz
+	curl -L -o _data/dl/t10k-labels-idx1-ubyte.gz https://storage.googleapis.com/cvdf-datasets/mnist/t10k-labels-idx1-ubyte.gz
 	cd _data/dl && tar -xzvf cifar-10-binary.tar.gz
 	cd _data/dl && gunzip *-ubyte.gz
 
@@ -48,13 +48,20 @@ preprocess:
 	$(MNIST_PROG) _data/dl/t10k-images-idx3-ubyte _data/dl/t10k-labels-idx1-ubyte _data/mnist-t10k.txt
 	$(MNIST_PROG) _data/dl/train-images-idx3-ubyte _data/dl/train-labels-idx1-ubyte _data/mnist-train.txt
 
-clean:
-	rm -rf _data
-
+# Create the reduced datasets
 _data/mnist-train-600.txt:
 	python3 preprocessing/mnist-binary-preprocess.py _data/dl/train-images-idx3-ubyte _data/dl/train-labels-idx1-ubyte _data/mnist-train-600.txt 100
 _data/mnist-t10k-100.txt:
 	python3 preprocessing/mnist-binary-preprocess.py _data/dl/t10k-images-idx3-ubyte _data/dl/t10k-labels-idx1-ubyte _data/mnist-t10k-100.txt 100
+_data/cifar10-data_batch_n600.txt:
+	cd _data && cat cifar10-data_batch_1.txt | head -n 600 > cifar10-data_batch_n600.txt
+_data/cifar10-test_batch_n100.txt:
+	cd _data && cat cifar10-test_batch.txt | head -n 100 > cifar10-test_batch_n100.txt
+
+prepare: dl-data preprocess _data/mnist-train-600.txt _data/mnist-t10k-100.txt _data/cifar10-data_batch_n600.txt _data/cifar10-test_batch_n100.txt
+
+clean:
+	rm -rf _data
 
 test-cuda: _data/mnist-train-600.txt _data/mnist-t10k-100.txt
 	mi compile --accelerate benchmarks/mnist/bm-mnist.mc
